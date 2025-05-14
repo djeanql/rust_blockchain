@@ -1,5 +1,5 @@
 use crate::utils::unix_timestamp;
-use k256::ecdsa::{Signature, SigningKey, VerifyingKey, signature::Signer, signature::Verifier};
+use k256::ecdsa::{Signature, SigningKey, signature::Signer, signature::Verifier};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fmt;

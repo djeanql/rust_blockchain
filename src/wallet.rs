@@ -1,6 +1,5 @@
 use crate::transaction::Transaction;
-use k256::ecdsa::{Signature, SigningKey, VerifyingKey, signature::Signer, signature::Verifier};
-use serde::{Deserialize, Serialize};
+use k256::ecdsa::{SigningKey, VerifyingKey};
 
 pub struct Wallet {
     signing_key: SigningKey,

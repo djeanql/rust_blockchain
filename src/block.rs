@@ -101,13 +101,7 @@ impl Block {
     }
 
     fn validate_transactions(&self) -> bool {
-        for tx in &self.transactions {
-            if !tx.verify_signature() {
-                return false;
-            }
-        }
-
-        true
+        self.transactions.iter().all(|tx| tx.verify_signature())
     }
 }
 

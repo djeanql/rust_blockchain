@@ -3,7 +3,6 @@ mod blockchain;
 mod transaction;
 mod utils;
 mod wallet;
-use block::Block;
 use blockchain::Blockchain;
 use transaction::Transaction;
 use utils::*;
@@ -47,6 +46,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use block::Block;
 
     #[test]
     fn test_invalid_hash() {
