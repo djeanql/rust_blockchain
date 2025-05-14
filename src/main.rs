@@ -90,6 +90,7 @@ mod tests {
 
     #[test]
     fn test_digest_update() {
+        let wallet = Wallet::new();
         let mut block = Block::new(
             0,
             String::from(""),
@@ -99,6 +100,13 @@ mod tests {
         let old_digest = block.digest.clone();
         block.update_nonce_and_timestamp();
         assert_ne!(block.digest, old_digest);
+
+        let tx = Transaction::new(
+            wallet.address.clone(),
+            wallet.address.clone(),
+            42.0,
+        );
+        block.add_tx(tx);
         block.update_nonce_and_timestamp();
         assert_ne!(block.digest, old_digest);
     }
@@ -117,5 +125,23 @@ mod tests {
 
         assert!(!tx.signature.is_empty());
         assert!(tx.verify_signature());
+    }
+
+    #[test]
+    fn test_invalid_transaction_signature_added() {
+        let mut blockchain = Blockchain::new();
+        let mut block = blockchain.next_block();
+        let wallet = Wallet::new();
+
+        let mut tx = Transaction::new(
+            wallet.address.clone(),
+            wallet.address.clone(), //send to self for testing
+            42.0,
+        );
+
+        tx.signature = String::from("invalid_signature");
+
+        block.add_tx(tx);
+        assert_eq!(blockchain.add_block(block), Err("Invalid block"));
     }
 }
