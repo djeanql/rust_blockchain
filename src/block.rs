@@ -1,9 +1,21 @@
 use crate::transaction::Transaction;
 use crate::utils;
+use bincode::Encode;
 use sha2::{Digest, Sha256};
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[derive(Encode)]
+struct BlockNoDigest<'a> {
+    index: u32,
+    timestamp: u64,
+    prev_hash: &'a String,
+    target: &'a String,
+    transactions: &'a Vec<Transaction>,
+    nonce: u64,
+}
+
+#[derive(Encode)]
 pub struct Block {
     pub digest: String,
     pub index: u32,
@@ -50,18 +62,26 @@ impl Block {
         }
     }
 
-    fn as_json(&self) -> serde_json::Value {
-        serde_json::json!({
-          "index": self.index,
-          "timestamp": self.timestamp,
-          "prev_hash": self.prev_hash,
-          "transactions": self.transactions,
-          "target": self.target,
-          "nonce": self.nonce})
+    #[allow(dead_code)]
+    fn as_bincode(&self) -> Vec<u8> {
+        bincode::encode_to_vec(self, bincode::config::standard()).unwrap()
+    }
+
+    fn as_bincode_no_digest(&self) -> Vec<u8> {
+        let no_digest = BlockNoDigest {
+            index: self.index,
+            timestamp: self.timestamp,
+            prev_hash: &self.prev_hash,
+            target: &self.target,
+            transactions: &self.transactions,
+            nonce: self.nonce,
+        };
+
+        bincode::encode_to_vec(no_digest, bincode::config::standard()).unwrap()
     }
 
     pub fn hash(&self) -> String {
-        let block_data = self.as_json().to_string();
+        let block_data = self.as_bincode_no_digest();
 
         let mut hasher = Sha256::new();
         hasher.update(block_data);

@@ -18,11 +18,7 @@ fn main() {
 
     println!("{:?}", block.digest);
 
-    let mut tx = Transaction::new(
-        wallet.address.clone(),
-        wallet.address.clone(),
-        1.0,
-    );
+    let mut tx = Transaction::new(wallet.address.clone(), wallet.address.clone(), 1.0);
 
     wallet.sign_transaction(&mut tx);
 

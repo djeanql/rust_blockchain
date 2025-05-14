@@ -1,9 +1,7 @@
+use crate::block::Block;
 use hex;
 use num_bigint::BigUint;
-use crate::block::Block;
 use std::time::{SystemTime, UNIX_EPOCH};
-
-
 
 fn hash_less_than_target(hash: &str, target: &str) -> bool {
     let hash_num = BigUint::from_bytes_be(&hex::decode(hash).unwrap());

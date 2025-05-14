@@ -1,17 +1,25 @@
 use crate::utils::unix_timestamp;
+use bincode::Encode;
 use k256::ecdsa::{Signature, SigningKey, signature::Signer, signature::Verifier};
-use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fmt;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Encode)]
+pub struct TransactionNoSignature<'a> {
+    pub sender: &'a String,
+    pub receiver: &'a String,
+    pub amount: f64,
+    pub id: &'a String,
+    pub timestamp: u64,
+}
+
+#[derive(Encode)]
 pub struct Transaction {
     pub sender: String,
     pub receiver: String,
     pub amount: f64,
     pub id: String,
     pub timestamp: u64,
-    #[serde(skip)]
     pub signature: String,
 }
 
@@ -31,26 +39,33 @@ impl Transaction {
     }
 
     fn sighash(&self) -> String {
-        let data = serde_json::to_string(self).expect("Failed to serialize transaction");
+        let data = self.as_bincode_no_signature();
         let mut hasher = Sha256::new();
-        hasher.update(data.as_bytes());
+        hasher.update(&data);
         format!("{:x}", hasher.finalize())
     }
 
     fn hash(&self) -> String {
-        let serializable_tx = SerializableTx {
+        let data = self.as_bincode();
+        let mut hasher = Sha256::new();
+        hasher.update(&data);
+        format!("{:x}", hasher.finalize())
+    }
+
+    fn as_bincode(&self) -> Vec<u8> {
+        bincode::encode_to_vec(self, bincode::config::standard()).unwrap()
+    }
+
+    fn as_bincode_no_signature(&self) -> Vec<u8> {
+        let no_signature = TransactionNoSignature {
             sender: &self.sender,
             receiver: &self.receiver,
             amount: self.amount,
             id: &self.id,
             timestamp: self.timestamp,
-            signature: &self.signature,
         };
 
-        let data = serde_json::to_string(&serializable_tx).expect("Failed to serialize transaction");
-        let mut hasher = Sha256::new();
-        hasher.update(data.as_bytes());
-        format!("{:x}", hasher.finalize())
+        bincode::encode_to_vec(no_signature, bincode::config::standard()).unwrap()
     }
 
     pub fn sign(&mut self, key: &SigningKey) {
@@ -81,14 +96,4 @@ impl fmt::Display for Transaction {
             self.sender, self.receiver, self.amount, self.id
         )
     }
-}
-
-#[derive(Serialize)]
-struct SerializableTx<'a> {
-    sender: &'a String,
-    receiver: &'a String,
-    amount: f64,
-    id: &'a String,
-    timestamp: u64,
-    signature: &'a String,
 }
