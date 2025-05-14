@@ -30,15 +30,31 @@ impl Transaction {
         tx
     }
 
-    fn hash(&self) -> String {
+    fn sighash(&self) -> String {
         let data = serde_json::to_string(self).expect("Failed to serialize transaction");
         let mut hasher = Sha256::new();
         hasher.update(data.as_bytes());
         format!("{:x}", hasher.finalize())
     }
 
+    fn hash(&self) -> String {
+        let serializable_tx = SerializableTx {
+            sender: &self.sender,
+            receiver: &self.receiver,
+            amount: self.amount,
+            id: &self.id,
+            timestamp: self.timestamp,
+            signature: &self.signature,
+        };
+
+        let data = serde_json::to_string(&serializable_tx).expect("Failed to serialize transaction");
+        let mut hasher = Sha256::new();
+        hasher.update(data.as_bytes());
+        format!("{:x}", hasher.finalize())
+    }
+
     pub fn sign(&mut self, key: &SigningKey) {
-        let sig: Signature = key.sign(self.hash().as_bytes());
+        let sig: Signature = key.sign(self.sighash().as_bytes());
         self.signature = hex::encode(sig.to_der());
     }
 
@@ -52,7 +68,7 @@ impl Transaction {
             k256::ecdsa::Signature::from_der(&der_bytes).expect("Invalid DER signature");
 
         verify_key
-            .verify(self.hash().as_bytes(), &signature)
+            .verify(self.sighash().as_bytes(), &signature)
             .is_ok()
     }
 }
@@ -65,4 +81,14 @@ impl fmt::Display for Transaction {
             self.sender, self.receiver, self.amount, self.id
         )
     }
+}
+
+#[derive(Serialize)]
+struct SerializableTx<'a> {
+    sender: &'a String,
+    receiver: &'a String,
+    amount: f64,
+    id: &'a String,
+    timestamp: u64,
+    signature: &'a String,
 }
