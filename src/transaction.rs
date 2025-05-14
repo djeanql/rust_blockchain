@@ -38,14 +38,14 @@ impl Transaction {
         tx
     }
 
-    fn sighash(&self) -> String {
+    pub fn sighash(&self) -> String {
         let data = self.as_bincode_no_signature();
         let mut hasher = Sha256::new();
         hasher.update(&data);
         format!("{:x}", hasher.finalize())
     }
 
-    fn hash(&self) -> String {
+    pub fn hash(&self) -> String {
         let data = self.as_bincode();
         let mut hasher = Sha256::new();
         hasher.update(&data);
