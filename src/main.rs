@@ -22,7 +22,6 @@ fn main() {
         wallet.address.clone(),
         wallet.address.clone(),
         1.0,
-        String::from("tx1"),
     );
 
     wallet.sign_transaction(&mut tx);
@@ -116,7 +115,6 @@ mod tests {
             wallet.address.clone(),
             wallet.address.clone(), //send to self for testing
             42.0,
-            String::from("0"),
         );
 
         wallet.sign_transaction(&mut tx);

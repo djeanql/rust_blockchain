@@ -10,21 +10,24 @@ pub struct Transaction {
     pub receiver: String,
     pub amount: f64,
     pub id: String,
-    #[serde(skip_serializing)]
-    pub signature: String,
     pub timestamp: u64,
+    #[serde(skip)]
+    pub signature: String,
 }
 
 impl Transaction {
-    pub fn new(sender: String, receiver: String, amount: f64, id: String) -> Transaction {
-        Transaction {
+    pub fn new(sender: String, receiver: String, amount: f64) -> Transaction {
+        let mut tx = Transaction {
             sender,
             receiver,
             amount,
-            id,
-            signature: String::new(),
+            id: String::new(),
             timestamp: unix_timestamp(),
-        }
+            signature: String::new(),
+        };
+
+        tx.id = tx.hash();
+        tx
     }
 
     fn hash(&self) -> String {
