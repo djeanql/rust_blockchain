@@ -1,8 +1,8 @@
 mod block;
 mod blockchain;
 mod transaction;
-mod utxo;
 mod utils;
+mod utxo;
 mod wallet;
 use blockchain::Blockchain;
 use transaction::Transaction;
@@ -39,8 +39,7 @@ fn main() {
     println!("{}", blockchain);
 }
 
-
-//todo: separate out the tests into separate modules
+//TODO: separate out the tests into separate modules
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -51,11 +50,7 @@ mod tests {
         let wallet = Wallet::new();
         let mut blockchain = Blockchain::new();
         let mut block = blockchain.next_block();
-        let mut tx = Transaction::new(
-            wallet.address.clone(),
-            wallet.address.clone(),
-            42.0,
-        );
+        let mut tx = Transaction::new(wallet.address.clone(), wallet.address.clone(), 42.0);
         wallet.sign_transaction(&mut tx);
         block.add_tx(tx);
         mine(&mut block);
@@ -120,11 +115,7 @@ mod tests {
         block.update_nonce_and_timestamp();
         assert_ne!(block.digest, old_digest);
 
-        let tx = Transaction::new(
-            wallet.address.clone(),
-            wallet.address.clone(),
-            42.0,
-        );
+        let tx = Transaction::new(wallet.address.clone(), wallet.address.clone(), 42.0);
         block.add_tx(tx);
         block.update_nonce_and_timestamp();
         assert_ne!(block.digest, old_digest);
@@ -195,5 +186,4 @@ mod tests {
         assert_eq!(block.target, deserialised.target);
         assert_eq!(block.transactions.len(), deserialised.transactions.len());
     }
-    
 }

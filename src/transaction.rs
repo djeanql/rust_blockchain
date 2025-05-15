@@ -1,5 +1,5 @@
 use crate::utils::unix_timestamp;
-use bincode::{Encode, Decode};
+use bincode::{Decode, Encode};
 use k256::ecdsa::{Signature, SigningKey, signature::Signer, signature::Verifier};
 use sha2::{Digest, Sha256};
 use std::fmt;
@@ -39,12 +39,15 @@ impl Transaction {
             amount,
             id: String::new(),
             timestamp: unix_timestamp(),
-            signature: String::new()
+            signature: String::new(),
         }
     }
 
+    #[allow(dead_code)]
     pub fn from_bincode(data: &[u8]) -> Transaction {
-        bincode::decode_from_slice(data, bincode::config::standard()).unwrap().0
+        bincode::decode_from_slice(data, bincode::config::standard())
+            .unwrap()
+            .0
     }
 
     pub fn set_id(&mut self) {

@@ -1,8 +1,11 @@
-use bincode::{Encode, Decode};
-use k256::ecdsa::{Signature, SigningKey, signature::Signer};
+use crate::utils;
+use bincode::{Decode, Encode};
 use k256::ecdsa::signature::Verifier;
+use k256::ecdsa::{Signature, SigningKey, signature::Signer};
 use sha2::{Digest, Sha256};
-use crate::{utils, wallet::Wallet};
+
+//TODO: use ed25519
+//TODO: use bytes instead of strings
 
 #[derive(Encode, Decode, Clone)]
 struct TxInput {
@@ -21,7 +24,6 @@ impl TxInput {
 
     pub fn verify_signature(&self) -> bool {
         let tx_for_sign: TxInputForSign = self.clone().into();
-
 
         let pubkey_bytes = hex::decode(&self.pubkey).expect("Could not decode sender pubkey");
         let verify_key =
@@ -46,11 +48,7 @@ pub struct TxInputForSign {
 
 impl TxInputForSign {
     fn as_bincode(&self) -> Vec<u8> {
-        bincode::encode_to_vec(
-            self,
-            bincode::config::standard(),
-        )
-        .unwrap()
+        bincode::encode_to_vec(self, bincode::config::standard()).unwrap()
     }
 
     fn sighash(&self) -> String {
@@ -71,8 +69,7 @@ impl From<TxInput> for TxInputForSign {
     }
 }
 
-
-//todo: use public key hash and include pubkey in inputs
+//TODO: use public key hash and include pubkey in inputs
 #[derive(Encode, Decode, Clone)]
 struct TxOutput {
     pub value: u64,
@@ -82,19 +79,19 @@ struct TxOutput {
 pub struct Transaction {
     pub id: String,
     pub timestamp: u64,
-    pub inputs: Vec<TxInput>,
-    pub outputs: Vec<TxOutput>,
+    inputs: Vec<TxInput>,
+    outputs: Vec<TxOutput>,
 }
 
 #[derive(Encode, Decode, Clone)]
 struct TransactionNoID {
-    pub inputs: Vec<TxInput>,
-    pub outputs: Vec<TxOutput>,
+    inputs: Vec<TxInput>,
+    outputs: Vec<TxOutput>,
     pub timestamp: u64,
 }
 
 impl Transaction {
-    pub fn new(inputs: Vec<TxInput>, outputs: Vec<TxOutput>) -> Transaction {
+    fn new(inputs: Vec<TxInput>, outputs: Vec<TxOutput>) -> Transaction {
         Transaction {
             id: String::new(),
             timestamp: utils::unix_timestamp(),
@@ -130,13 +127,12 @@ impl Transaction {
     pub fn verify_signatures(&self) -> bool {
         self.inputs.iter().all(|input| input.verify_signature())
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::wallet::Wallet;
 
     #[test]
     fn test_create_transaction() {

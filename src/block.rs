@@ -1,6 +1,6 @@
 use crate::transaction::Transaction;
 use crate::utils;
-use bincode::{Encode, Decode};
+use bincode::{Decode, Encode};
 use sha2::{Digest, Sha256};
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -46,8 +46,12 @@ impl Block {
         block
     }
 
+    
+    #[allow(dead_code)]
     pub fn from_bincode(data: &[u8]) -> Block {
-        bincode::decode_from_slice(data, bincode::config::standard()).unwrap().0
+        bincode::decode_from_slice(data, bincode::config::standard())
+            .unwrap()
+            .0
     }
 
     pub fn genesis() -> Block {
@@ -66,6 +70,7 @@ impl Block {
         }
     }
 
+    #[allow(dead_code)]
     pub fn as_bincode(&self) -> Vec<u8> {
         bincode::encode_to_vec(self, bincode::config::standard()).unwrap()
     }
