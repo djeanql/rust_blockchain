@@ -16,12 +16,12 @@ fn main() {
 
     let wallet = Wallet::new();
 
-    println!("{:?}", block.digest);
-
     let mut tx = Transaction::new(wallet.address.clone(), wallet.address.clone(), 1.0);
 
     wallet.sign_transaction(&mut tx);
 
+    println!("Transaction ID: {}", tx.id);
+    println!("Transaction Hash: {}", tx.hash());
     block.add_tx(tx);
 
     mine(&mut block);

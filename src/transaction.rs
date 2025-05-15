@@ -9,8 +9,16 @@ pub struct TransactionNoSignature<'a> {
     pub sender: &'a String,
     pub receiver: &'a String,
     pub amount: f64,
-    pub id: &'a String,
     pub timestamp: u64,
+}
+
+#[derive(Encode)]
+pub struct TransactionNoID<'a> {
+    pub sender: &'a String,
+    pub receiver: &'a String,
+    pub amount: f64,
+    pub timestamp: u64,
+    pub signature: String,
 }
 
 #[derive(Encode)]
@@ -25,17 +33,18 @@ pub struct Transaction {
 
 impl Transaction {
     pub fn new(sender: String, receiver: String, amount: f64) -> Transaction {
-        let mut tx = Transaction {
+        Transaction {
             sender,
             receiver,
             amount,
             id: String::new(),
             timestamp: unix_timestamp(),
-            signature: String::new(),
-        };
+            signature: String::new()
+        }
+    }
 
-        tx.id = tx.hash();
-        tx
+    pub fn set_id(&mut self) {
+        self.id = self.hash();
     }
 
     pub fn sighash(&self) -> String {
@@ -46,7 +55,7 @@ impl Transaction {
     }
 
     pub fn hash(&self) -> String {
-        let data = self.as_bincode();
+        let data = self.as_bincode_no_id();
         let mut hasher = Sha256::new();
         hasher.update(&data);
         format!("{:x}", hasher.finalize())
@@ -61,16 +70,28 @@ impl Transaction {
             sender: &self.sender,
             receiver: &self.receiver,
             amount: self.amount,
-            id: &self.id,
             timestamp: self.timestamp,
         };
 
         bincode::encode_to_vec(no_signature, bincode::config::standard()).unwrap()
     }
 
+    fn as_bincode_no_id(&self) -> Vec<u8> {
+        let no_id = TransactionNoID {
+            sender: &self.sender,
+            receiver: &self.receiver,
+            amount: self.amount,
+            timestamp: self.timestamp,
+            signature: self.signature.clone(),
+        };
+
+        bincode::encode_to_vec(no_id, bincode::config::standard()).unwrap()
+    }
+
     pub fn sign(&mut self, key: &SigningKey) {
         let sig: Signature = key.sign(self.sighash().as_bytes());
         self.signature = hex::encode(sig.to_der());
+        self.set_id();
     }
 
     pub fn verify_signature(&self) -> bool {

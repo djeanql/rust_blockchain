@@ -123,7 +123,7 @@ impl Block {
     fn validate_transactions(&self) -> bool {
         self.transactions.iter().all(|tx| {
             // Implement transaction validation; double spending, check coinbase, etc.
-            tx.verify_signature() && tx.id == tx.sighash() && tx.timestamp <= utils::unix_timestamp()
+            tx.verify_signature() && tx.id == tx.hash() && tx.timestamp <= utils::unix_timestamp()
         })
     }
 }
