@@ -1,5 +1,5 @@
 use crate::utils::unix_timestamp;
-use bincode::Encode;
+use bincode::{Encode, Decode};
 use k256::ecdsa::{Signature, SigningKey, signature::Signer, signature::Verifier};
 use sha2::{Digest, Sha256};
 use std::fmt;
@@ -21,7 +21,7 @@ pub struct TransactionNoID<'a> {
     pub signature: String,
 }
 
-#[derive(Encode)]
+#[derive(Encode, Decode)]
 pub struct Transaction {
     pub sender: String,
     pub receiver: String,
@@ -43,6 +43,10 @@ impl Transaction {
         }
     }
 
+    pub fn from_bincode(data: &[u8]) -> Transaction {
+        bincode::decode_from_slice(data, bincode::config::standard()).unwrap().0
+    }
+
     pub fn set_id(&mut self) {
         self.id = self.hash();
     }
@@ -61,7 +65,7 @@ impl Transaction {
         format!("{:x}", hasher.finalize())
     }
 
-    fn as_bincode(&self) -> Vec<u8> {
+    pub fn as_bincode(&self) -> Vec<u8> {
         bincode::encode_to_vec(self, bincode::config::standard()).unwrap()
     }
 

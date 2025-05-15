@@ -1,6 +1,6 @@
 use crate::transaction::Transaction;
 use crate::utils;
-use bincode::Encode;
+use bincode::{Encode, Decode};
 use sha2::{Digest, Sha256};
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -15,7 +15,7 @@ struct BlockNoDigest<'a> {
     nonce: u64,
 }
 
-#[derive(Encode)]
+#[derive(Encode, Decode)]
 pub struct Block {
     pub digest: String,
     pub index: u32,
@@ -46,6 +46,10 @@ impl Block {
         block
     }
 
+    pub fn from_bincode(data: &[u8]) -> Block {
+        bincode::decode_from_slice(data, bincode::config::standard()).unwrap().0
+    }
+
     pub fn genesis() -> Block {
         Block {
             digest: String::from(
@@ -62,8 +66,7 @@ impl Block {
         }
     }
 
-    #[allow(dead_code)]
-    fn as_bincode(&self) -> Vec<u8> {
+    pub fn as_bincode(&self) -> Vec<u8> {
         bincode::encode_to_vec(self, bincode::config::standard()).unwrap()
     }
 

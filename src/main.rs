@@ -144,4 +144,37 @@ mod tests {
         block.add_tx(tx);
         assert_eq!(blockchain.add_block(block), Err("Invalid block"));
     }
+
+    #[test]
+    fn test_deserialise_transaction() {
+        let wallet = Wallet::new();
+        let tx = Transaction::new(
+            wallet.address.clone(),
+            wallet.address.clone(), //send to self for testing
+            42.0,
+        );
+
+        let serialised = tx.as_bincode();
+        let deserialised = Transaction::from_bincode(&serialised);
+
+        assert_eq!(tx.sender, deserialised.sender);
+        assert_eq!(tx.receiver, deserialised.receiver);
+        assert_eq!(tx.amount, deserialised.amount);
+        assert_eq!(tx.timestamp, deserialised.timestamp);
+    }
+
+    #[test]
+    fn test_deserialise_block() {
+        let blockchain = Blockchain::new();
+        let block = blockchain.next_block();
+
+        let serialised = block.as_bincode();
+        let deserialised = Block::from_bincode(&serialised);
+
+        assert_eq!(block.index, deserialised.index);
+        assert_eq!(block.prev_hash, deserialised.prev_hash);
+        assert_eq!(block.target, deserialised.target);
+        assert_eq!(block.transactions.len(), deserialised.transactions.len());
+    }
+    
 }
