@@ -1,7 +1,7 @@
 use bincode::{Encode, Decode};
-use k256::ecdsa::{Signature, SigningKey, signature::Signer, signature::Verifier};
+use k256::ecdsa::{Signature, SigningKey, signature::Signer};
 use sha2::{Digest, Sha256};
-use crate::utils;
+use crate::{utils, wallet::Wallet};
 
 #[derive(Encode, Decode, Clone)]
 struct TxInput {
@@ -25,6 +25,32 @@ pub struct TxInputForSign {
     pub output: u16,
 }
 
+impl TxInputForSign {
+    fn as_bincode(&self) -> Vec<u8> {
+        bincode::encode_to_vec(
+            self,
+            bincode::config::standard(),
+        )
+        .unwrap()
+    }
+
+    fn sighash(&self) -> String {
+        let data = self.as_bincode();
+        let mut hasher = Sha256::new();
+        hasher.update(&data);
+        format!("{:x}", hasher.finalize())
+    }
+}
+
+impl From<TxInput> for TxInputForSign {
+    fn from(input: TxInput) -> Self {
+        TxInputForSign {
+            txid: input.txid,
+            output: input.output,
+        }
+    }
+}
+
 
 //todo: use public key hash and include pubkey in inputs
 #[derive(Encode, Decode, Clone)]
@@ -33,7 +59,7 @@ struct TxOutput {
     pub receiver_pk: String,
 }
 
-struct Transaction {
+pub struct Transaction {
     pub id: String,
     pub timestamp: u64,
     pub inputs: Vec<TxInput>,
@@ -47,23 +73,6 @@ struct TransactionNoID {
     pub timestamp: u64,
 }
 
-#[derive(Encode, Decode)]
-struct TransactionForSign {
-    pub timestamp: u64,
-    pub inputs: Vec<TxInputForSign>,
-    pub outputs: Vec<TxOutput>,
-}
-
-impl From<&Transaction> for TransactionForSign {
-    fn from(tx: &Transaction) -> Self {
-        TransactionForSign {
-            timestamp: tx.timestamp,
-            inputs: tx.inputs.iter().map(|i| i.into()).collect(),
-            outputs: tx.outputs.clone(),
-        }
-    }
-}
-
 impl Transaction {
     pub fn new(inputs: Vec<TxInput>, outputs: Vec<TxOutput>) -> Transaction {
         Transaction {
@@ -72,14 +81,6 @@ impl Transaction {
             inputs,
             outputs,
         }
-    }
-
-    fn as_bincode_for_sign(&self) -> Vec<u8> {
-        bincode::encode_to_vec(
-            &TransactionForSign::from(self),
-            bincode::config::standard(),
-        )
-        .unwrap()
     }
 
     fn as_bincode_no_id(&self) -> Vec<u8> {
@@ -92,18 +93,20 @@ impl Transaction {
         bincode::encode_to_vec(no_id, bincode::config::standard()).unwrap()
     }
 
-    fn sighash(&self) -> String {
-        let data = self.as_bincode_for_sign();
-        let mut hasher = Sha256::new();
-        hasher.update(&data);
-        format!("{:x}", hasher.finalize())
-    }
-
     fn hash(&self) -> String {
         let data = self.as_bincode_no_id();
         let mut hasher = Sha256::new();
         hasher.update(&data);
         format!("{:x}", hasher.finalize())
+    }
+
+    pub fn sign(&mut self, signing_key: &SigningKey) {
+        self.inputs.iter_mut().for_each(|input| {
+            let tx_for_sign: TxInputForSign = input.clone().into();
+            let signature: Signature = signing_key.sign(tx_for_sign.sighash().as_bytes());
+            input.signature = signature.to_string();
+        });
+        self.id = self.hash();
     }
 
 }
@@ -142,5 +145,43 @@ mod tests {
         let transaction = Transaction::new(inputs, outputs);
         assert_eq!(transaction.inputs.len(), 2);
         assert_eq!(transaction.outputs.len(), 2);
+    }
+
+    #[test]
+    fn test_sign() {
+        let wallet = Wallet::new();
+
+        let mut inputs = vec![
+            TxInput {
+                txid: "txid1".to_string(),
+                output: 0,
+                signature: String::new(),
+            },
+            TxInput {
+                txid: "txid2".to_string(),
+                output: 1,
+                signature: String::new(),
+            },
+        ];
+
+        let outputs = vec![
+            TxOutput {
+                value: 100,
+                receiver_pk: "receiver_pk1".to_string(),
+            },
+            TxOutput {
+                value: 200,
+                receiver_pk: "receiver_pk2".to_string(),
+            },
+        ];
+
+        let mut transaction = Transaction::new(inputs, outputs);
+
+        wallet.sign_utxo_based_transaction(&mut transaction);
+
+        assert!(!transaction.id.is_empty());
+        assert!(!transaction.inputs[0].signature.is_empty());
+        assert!(transaction.inputs[0].signature != transaction.inputs[1].signature);
+        assert!(transaction.id == transaction.hash());
     }
 }

@@ -1,4 +1,5 @@
 use crate::transaction::Transaction;
+use crate::utxo;
 use k256::ecdsa::{SigningKey, VerifyingKey};
 
 pub struct Wallet {
@@ -24,6 +25,10 @@ impl Wallet {
     }
 
     pub fn sign_transaction(&self, tx: &mut Transaction) {
+        tx.sign(&self.signing_key);
+    }
+
+    pub fn sign_utxo_based_transaction(&self, tx: &mut utxo::Transaction) {
         tx.sign(&self.signing_key);
     }
 }
