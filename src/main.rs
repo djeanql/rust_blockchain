@@ -39,6 +39,8 @@ fn main() {
     println!("{}", blockchain);
 }
 
+
+//todo: separate out the tests into separate modules
 #[cfg(test)]
 mod tests {
     use super::*;

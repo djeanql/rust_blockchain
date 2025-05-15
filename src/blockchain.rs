@@ -6,6 +6,9 @@ pub struct Blockchain {
     pub target: String,
 }
 
+//todo: add difficulty adjustment
+//todo: coinbase transactions
+
 impl Blockchain {
     pub fn new() -> Blockchain {
         Blockchain {
