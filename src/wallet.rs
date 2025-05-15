@@ -4,7 +4,7 @@ use k256::ecdsa::{SigningKey, VerifyingKey};
 
 pub struct Wallet {
     signing_key: SigningKey,
-    verifying_key: VerifyingKey,
+    pub verifying_key: VerifyingKey,
     pub address: String,
 }
 

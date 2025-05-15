@@ -9,41 +9,41 @@ use sha2::{Digest, Sha256};
 
 #[derive(Encode, Decode, Clone)]
 struct TxInput {
-    pub txid: String,
+    pub txid: [u8; 32],
     pub output: u16,
-    pub signature: String,
-    pub pubkey: String,
+    pub signature: Vec<u8>,
+    pub pubkey: Vec<u8>,
 }
 
 impl TxInput {
     pub fn sign(&mut self, signing_key: &SigningKey) {
+        self.pubkey = signing_key.verifying_key().to_encoded_point(false).as_bytes().to_vec();
         let tx_for_sign: TxInputForSign = self.clone().into();
-        let signature: Signature = signing_key.sign(tx_for_sign.sighash().as_bytes());
-        self.signature = hex::encode(signature.to_der().as_bytes());
+        
+        let signature: Signature = signing_key.sign(&tx_for_sign.sighash());
+        self.signature = signature.to_der().as_bytes().to_vec();
     }
 
     pub fn verify_signature(&self) -> bool {
         let tx_for_sign: TxInputForSign = self.clone().into();
 
-        let pubkey_bytes = hex::decode(&self.pubkey).expect("Could not decode sender pubkey");
         let verify_key =
-            k256::ecdsa::VerifyingKey::from_sec1_bytes(&pubkey_bytes).expect("Invalid public key");
+            k256::ecdsa::VerifyingKey::from_sec1_bytes(&self.pubkey).expect("Invalid public key");
 
-        let der_bytes = hex::decode(&self.signature).expect("Could not decode signature");
         let signature =
-            k256::ecdsa::Signature::from_der(&der_bytes).expect("Invalid DER signature");
+            k256::ecdsa::Signature::from_der(&self.signature).expect("Invalid DER signature");
 
         verify_key
-            .verify(tx_for_sign.sighash().as_bytes(), &signature)
+            .verify(&tx_for_sign.sighash(), &signature)
             .is_ok()
     }
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Debug)]
 pub struct TxInputForSign {
-    pub txid: String,
+    pub txid: [u8; 32],
     pub output: u16,
-    pub pubkey: String,
+    pub pubkey: Vec<u8>,
 }
 
 impl TxInputForSign {
@@ -51,11 +51,9 @@ impl TxInputForSign {
         bincode::encode_to_vec(self, bincode::config::standard()).unwrap()
     }
 
-    fn sighash(&self) -> String {
+    fn sighash(&self) -> [u8; 32] {
         let data = self.as_bincode();
-        let mut hasher = Sha256::new();
-        hasher.update(&data);
-        format!("{:x}", hasher.finalize())
+        Sha256::digest(&data).to_vec().try_into().unwrap()
     }
 }
 
@@ -69,15 +67,15 @@ impl From<TxInput> for TxInputForSign {
     }
 }
 
-//TODO: use public key hash and include pubkey in inputs
+//TODO: use public key hash
 #[derive(Encode, Decode, Clone)]
 struct TxOutput {
     pub value: u64,
-    pub receiver_pk: String,
+    pub receiver_pk: Vec<u8>,
 }
 
 pub struct Transaction {
-    pub id: String,
+    pub id: [u8; 32],
     pub timestamp: u64,
     inputs: Vec<TxInput>,
     outputs: Vec<TxOutput>,
@@ -93,7 +91,7 @@ struct TransactionNoID {
 impl Transaction {
     fn new(inputs: Vec<TxInput>, outputs: Vec<TxOutput>) -> Transaction {
         Transaction {
-            id: String::new(),
+            id: [0; 32],
             timestamp: utils::unix_timestamp(),
             inputs,
             outputs,
@@ -110,11 +108,9 @@ impl Transaction {
         bincode::encode_to_vec(no_id, bincode::config::standard()).unwrap()
     }
 
-    fn hash(&self) -> String {
+    fn hash(&self) -> [u8; 32] {
         let data = self.as_bincode_no_id();
-        let mut hasher = Sha256::new();
-        hasher.update(&data);
-        format!("{:x}", hasher.finalize())
+        Sha256::digest(&data).to_vec().try_into().unwrap()
     }
 
     pub fn sign(&mut self, signing_key: &SigningKey) {
@@ -138,27 +134,27 @@ mod tests {
     fn test_create_transaction() {
         let inputs = vec![
             TxInput {
-                txid: "txid1".to_string(),
+                txid: [0; 32],
                 output: 0,
-                signature: "signature1".to_string(),
-                pubkey: "pubkey".to_string(),
+                signature: "signature1".as_bytes().to_vec(),
+                pubkey: "pubkey".as_bytes().to_vec(),
             },
             TxInput {
-                txid: "txid2".to_string(),
+                txid: [1; 32],
                 output: 1,
-                signature: "signature2".to_string(),
-                pubkey: "pubkey".to_string(),
+                signature: "signature2".as_bytes().to_vec(),
+                pubkey: "pubkey".as_bytes().to_vec(),
             },
         ];
 
         let outputs = vec![
             TxOutput {
                 value: 100,
-                receiver_pk: "receiver_pk1".to_string(),
+                receiver_pk: "receiver_pk1".as_bytes().to_vec(),
             },
             TxOutput {
                 value: 200,
-                receiver_pk: "receiver_pk2".to_string(),
+                receiver_pk: "receiver_pk2".as_bytes().to_vec(),
             },
         ];
 
@@ -173,27 +169,27 @@ mod tests {
 
         let inputs = vec![
             TxInput {
-                txid: "txid1".to_string(),
+                txid: [0; 32],
                 output: 0,
-                signature: String::new(),
-                pubkey: wallet.address.clone(),
+                signature: Vec::new(),
+                pubkey: Vec::new(),
             },
             TxInput {
-                txid: "txid2".to_string(),
+                txid: [0; 32],
                 output: 1,
-                signature: String::new(),
-                pubkey: wallet.address.clone(),
+                signature: Vec::new(),
+                pubkey: Vec::new(),
             },
         ];
 
         let outputs = vec![
             TxOutput {
                 value: 100,
-                receiver_pk: wallet.address.clone(),
+                receiver_pk: wallet.address.as_bytes().to_vec(),
             },
             TxOutput {
                 value: 200,
-                receiver_pk: wallet.address.clone(),
+                receiver_pk: wallet.address.as_bytes().to_vec(),
             },
         ];
 
