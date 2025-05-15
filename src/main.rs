@@ -1,6 +1,7 @@
 mod block;
 mod blockchain;
 mod transaction;
+mod utxo;
 mod utils;
 mod wallet;
 use blockchain::Blockchain;
