@@ -44,6 +44,22 @@ mod tests {
     use block::Block;
 
     #[test]
+    fn test_valid_block() {
+        let wallet = Wallet::new();
+        let mut blockchain = Blockchain::new();
+        let mut block = blockchain.next_block();
+        let mut tx = Transaction::new(
+            wallet.address.clone(),
+            wallet.address.clone(),
+            42.0,
+        );
+        wallet.sign_transaction(&mut tx);
+        block.add_tx(tx);
+        mine(&mut block);
+        assert!(blockchain.add_block(block).is_ok());
+    }
+
+    #[test]
     fn test_invalid_hash() {
         let mut blockchain = Blockchain::new();
         assert_eq!(
