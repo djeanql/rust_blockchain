@@ -1,5 +1,6 @@
 use bincode::{Encode, Decode};
 use k256::ecdsa::{Signature, SigningKey, signature::Signer};
+use k256::ecdsa::signature::Verifier;
 use sha2::{Digest, Sha256};
 use crate::{utils, wallet::Wallet};
 
@@ -8,14 +9,31 @@ struct TxInput {
     pub txid: String,
     pub output: u16,
     pub signature: String,
+    pub pubkey: String,
 }
 
-impl From<&TxInput> for TxInputForSign {
-    fn from(input: &TxInput) -> Self {
-        TxInputForSign {
-            txid: input.txid.clone(),
-            output: input.output,
-        }
+impl TxInput {
+    pub fn sign(&mut self, signing_key: &SigningKey) {
+        let tx_for_sign: TxInputForSign = self.clone().into();
+        let signature: Signature = signing_key.sign(tx_for_sign.sighash().as_bytes());
+        self.signature = hex::encode(signature.to_der().as_bytes());
+    }
+
+    pub fn verify_signature(&self) -> bool {
+        let tx_for_sign: TxInputForSign = self.clone().into();
+
+
+        let pubkey_bytes = hex::decode(&self.pubkey).expect("Could not decode sender pubkey");
+        let verify_key =
+            k256::ecdsa::VerifyingKey::from_sec1_bytes(&pubkey_bytes).expect("Invalid public key");
+
+        let der_bytes = hex::decode(&self.signature).expect("Could not decode signature");
+        let signature =
+            k256::ecdsa::Signature::from_der(&der_bytes).expect("Invalid DER signature");
+
+        verify_key
+            .verify(tx_for_sign.sighash().as_bytes(), &signature)
+            .is_ok()
     }
 }
 
@@ -23,6 +41,7 @@ impl From<&TxInput> for TxInputForSign {
 pub struct TxInputForSign {
     pub txid: String,
     pub output: u16,
+    pub pubkey: String,
 }
 
 impl TxInputForSign {
@@ -47,6 +66,7 @@ impl From<TxInput> for TxInputForSign {
         TxInputForSign {
             txid: input.txid,
             output: input.output,
+            pubkey: input.pubkey,
         }
     }
 }
@@ -102,11 +122,13 @@ impl Transaction {
 
     pub fn sign(&mut self, signing_key: &SigningKey) {
         self.inputs.iter_mut().for_each(|input| {
-            let tx_for_sign: TxInputForSign = input.clone().into();
-            let signature: Signature = signing_key.sign(tx_for_sign.sighash().as_bytes());
-            input.signature = signature.to_string();
+            input.sign(signing_key);
         });
         self.id = self.hash();
+    }
+
+    pub fn verify_signatures(&self) -> bool {
+        self.inputs.iter().all(|input| input.verify_signature())
     }
 
 }
@@ -123,11 +145,13 @@ mod tests {
                 txid: "txid1".to_string(),
                 output: 0,
                 signature: "signature1".to_string(),
+                pubkey: "pubkey".to_string(),
             },
             TxInput {
                 txid: "txid2".to_string(),
                 output: 1,
                 signature: "signature2".to_string(),
+                pubkey: "pubkey".to_string(),
             },
         ];
 
@@ -151,27 +175,29 @@ mod tests {
     fn test_sign() {
         let wallet = Wallet::new();
 
-        let mut inputs = vec![
+        let inputs = vec![
             TxInput {
                 txid: "txid1".to_string(),
                 output: 0,
                 signature: String::new(),
+                pubkey: wallet.address.clone(),
             },
             TxInput {
                 txid: "txid2".to_string(),
                 output: 1,
                 signature: String::new(),
+                pubkey: wallet.address.clone(),
             },
         ];
 
         let outputs = vec![
             TxOutput {
                 value: 100,
-                receiver_pk: "receiver_pk1".to_string(),
+                receiver_pk: wallet.address.clone(),
             },
             TxOutput {
                 value: 200,
-                receiver_pk: "receiver_pk2".to_string(),
+                receiver_pk: wallet.address.clone(),
             },
         ];
 
@@ -183,5 +209,7 @@ mod tests {
         assert!(!transaction.inputs[0].signature.is_empty());
         assert!(transaction.inputs[0].signature != transaction.inputs[1].signature);
         assert!(transaction.id == transaction.hash());
+
+        assert!(transaction.verify_signatures());
     }
 }
