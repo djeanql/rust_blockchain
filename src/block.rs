@@ -112,6 +112,7 @@ impl Block {
         self.update_digest();
     }
 
+    //TODO: validate transaction as added
     pub fn add_tx(&mut self, tx: Transaction) {
         self.transactions.push(tx);
         self.update_digest();

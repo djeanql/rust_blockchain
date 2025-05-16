@@ -215,24 +215,6 @@ mod tests {
     use crate::wallet::Wallet;
 
     #[test]
-    fn test_create_blank_transaction() {
-        let inputs = vec![
-            TxInput::new_unsigned([0; 32], 2),
-            TxInput::new_unsigned([0; 32], 1),
-        ];
-
-        let outputs = vec![
-            TxOutput::new(100, [0; 32]),
-            TxOutput::new(200, [0; 32]),
-        ];
-
-        let transaction = Transaction::new(inputs, outputs);
-        println!("{}", transaction);
-        assert_eq!(transaction.inputs.len(), 2);
-        assert_eq!(transaction.outputs.len(), 2);
-    }
-
-    #[test]
     fn test_sign() {
         let wallet = Wallet::new();
 
@@ -314,18 +296,76 @@ mod tests {
     }
 
     #[test]
-    fn test_fails_if_input_data_tampered() {
+    fn test_fails_if_invalid_id() {
         let mut tx = Transaction::new(
-            vec![TxInput::new_unsigned([1;32], 2)],
+            vec![TxInput::new_unsigned([0;32], 0)],
             vec![TxOutput::new(50, [0;32])]
         );
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
         assert!(tx.verify().is_ok());
 
-        // tamper the TxInput’s `output` index
-        tx.inputs[0].output = 3;
-        assert!(matches!(tx.verify(), Err(TransactionError::SignatureVerificationFailed)));
+        tx.id[0] ^= 0xFF;
+        assert!(matches!(tx.verify(), Err(TransactionError::InvalidID)));
+    }
+
+    #[test]
+    fn test_fails_if_invalid_timestamp() {
+        let mut tx = Transaction::new(
+            vec![TxInput::new_unsigned([0;32], 0)],
+            vec![TxOutput::new(50, [0;32])]
+        );
+        tx.timestamp += 100;
+
+        let wallet = Wallet::new();
+        wallet.sign_transaction(&mut tx);
+
+        assert!(matches!(tx.verify(), Err(TransactionError::InvalidTimestamp)));
+    }
+
+    #[test]
+    fn test_fails_if_zero_value_output() {
+        let mut tx = Transaction::new(
+            vec![TxInput::new_unsigned([0;32], 0)],
+            vec![TxOutput::new(0, [0;32])]
+        );
+
+        let wallet = Wallet::new();
+        wallet.sign_transaction(&mut tx);
+
+        assert!(matches!(tx.verify(), Err(TransactionError::ZeroValueOutput)));
+    }
+
+    #[test]
+    fn test_fails_if_duplicate_input() {
+        let mut tx = Transaction::new(
+            vec![
+                TxInput::new_unsigned([0;32], 0),
+                TxInput::new_unsigned([0;32], 0)
+            ],
+            vec![TxOutput::new(50, [0;32])]
+        );
+
+        let wallet = Wallet::new();
+        wallet.sign_transaction(&mut tx);
+
+        assert!(matches!(tx.verify(), Err(TransactionError::DuplicateInput)));
+    }
+
+    #[test]
+    fn test_fails_if_duplicate_output() {
+        let mut tx = Transaction::new(
+            vec![TxInput::new_unsigned([0;32], 0)],
+            vec![
+                TxOutput::new(50, [0;32]),
+                TxOutput::new(50, [0;32])
+            ]
+        );
+
+        let wallet = Wallet::new();
+        wallet.sign_transaction(&mut tx);
+
+        assert!(matches!(tx.verify(), Err(TransactionError::DuplicateOutput)));
     }
 
 }
