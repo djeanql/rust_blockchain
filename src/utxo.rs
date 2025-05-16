@@ -190,4 +190,74 @@ mod tests {
 
         assert!(transaction.verify_signatures());
     }
+
+    #[test]
+    fn test_sign_invalid() {
+        let wallet = Wallet::new();
+
+        let inputs = vec![
+            TxInput::new_unsigned([0; 32], 2, [0; 33]),
+            TxInput::new_unsigned([0; 32], 1, [0; 33]),
+        ];
+
+        let outputs = vec![
+            TxOutput::new(100, [0; 32]),
+            TxOutput::new(200, [0; 32]),
+        ];
+
+        let mut transaction = Transaction::new(inputs, outputs);
+
+        wallet.sign_utxo_based_transaction(&mut transaction);
+
+        transaction.inputs[0].signature[0] = 1;
+
+        assert!(!transaction.verify_signatures());
+    }
+
+    #[test]
+    fn test_fails_if_signature_tampered() {
+        let mut tx = Transaction::new(
+            vec![TxInput::new_unsigned([0;32], 0, [0;33])],
+            vec![TxOutput::new(50, [0;32])]
+        );
+        let wallet = Wallet::new();
+        wallet.sign_utxo_based_transaction(&mut tx);
+        assert!(tx.verify_signatures());
+
+        // tamper
+        tx.inputs[0].signature[0] ^= 0xFF;
+        assert!(!tx.verify_signatures());
+    }
+
+    #[test]
+    fn test_fails_if_pubkey_tampered() {
+        let mut tx = Transaction::new(
+            vec![TxInput::new_unsigned([0;32], 0, [0;33])],
+            vec![TxOutput::new(50, [0;32])]
+        );
+        let wallet = Wallet::new();
+        wallet.sign_utxo_based_transaction(&mut tx);
+        assert!(tx.verify_signatures());
+
+        // tamper
+        tx.inputs[0].pubkey[1] ^= 0xAA;
+        assert!(!tx.verify_signatures());
+    }
+
+    #[test]
+    fn test_verify_fails_if_input_data_tampered() {
+        let mut tx = Transaction::new(
+            vec![TxInput::new_unsigned([1;32], 2, [0;33])],
+            vec![TxOutput::new(50, [0;32])]
+        );
+        let wallet = Wallet::new();
+        wallet.sign_utxo_based_transaction(&mut tx);
+        assert!(tx.verify_signatures());
+
+        // tamper the TxInput’s `output` index
+        tx.inputs[0].output = 3;
+        assert!(!tx.verify_signatures());
+    }
+
+
 }
