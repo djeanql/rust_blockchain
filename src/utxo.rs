@@ -8,7 +8,7 @@ use std::fmt;
 //TODO: use ed25519
 
 #[derive(Encode, Decode, Clone)]
-struct TxInput {
+pub struct TxInput {
     pub txid: [u8; 32],
     pub output: u16,
     pub signature: [u8; 64],
@@ -82,7 +82,7 @@ impl From<TxInput> for TxInputForSign {
 }
 
 #[derive(Encode, Decode, Clone)]
-struct TxOutput {
+pub struct TxOutput {
     pub value: u64,
     pub pkhash: [u8; 32],
 }
@@ -113,6 +113,7 @@ struct TransactionNoID {
     pub timestamp: u64,
 }
 
+#[derive(Encode, Decode)]
 pub struct Transaction {
     pub id: [u8; 32],
     pub timestamp: u64,
@@ -121,7 +122,7 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    fn new(inputs: Vec<TxInput>, outputs: Vec<TxOutput>) -> Transaction {
+    pub fn new(inputs: Vec<TxInput>, outputs: Vec<TxOutput>) -> Transaction {
         Transaction {
             id: [0; 32],
             timestamp: utils::unix_timestamp(),

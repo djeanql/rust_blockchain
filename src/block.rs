@@ -1,4 +1,4 @@
-use crate::transaction::Transaction;
+use crate::utxo::{Transaction, TransactionError};
 use crate::utils;
 use bincode::{Decode, Encode};
 use sha2::{Digest, Sha256};
@@ -125,15 +125,15 @@ impl Block {
                     .duration_since(UNIX_EPOCH)
                     .unwrap()
                     .as_secs()
-            && self.validate_transactions()
+            && self.validate_transactions().is_ok()
     }
 
-    fn validate_transactions(&self) -> bool {
-        self.transactions.iter().all(|tx| {
-            // Implement transaction validation; double spending, check coinbase, etc.
-            tx.verify_signature() && tx.id == tx.hash() && tx.timestamp <= utils::unix_timestamp()
-        })
+    fn validate_transactions(&self) -> Result<(), TransactionError> {
+    for tx in &self.transactions {
+        tx.verify()?;
     }
+    Ok(())
+}
 }
 
 impl fmt::Display for Block {

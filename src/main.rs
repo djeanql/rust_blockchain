@@ -5,7 +5,7 @@ mod utils;
 mod utxo;
 mod wallet;
 use blockchain::Blockchain;
-use transaction::Transaction;
+use utxo::{Transaction, TxInput, TxOutput};
 use utils::*;
 use wallet::Wallet;
 
@@ -17,18 +17,27 @@ fn main() {
 
     let wallet = Wallet::new();
 
-    let mut tx = Transaction::new(wallet.address.clone(), wallet.address.clone(), 1.0);
+    let inputs = vec![
+        TxInput::new_unsigned([0; 32], 2, [0; 33]),
+        TxInput::new_unsigned([0; 32], 1, [0; 33]),
+    ];
+
+    let outputs = vec![
+        TxOutput::new(100, [0; 32]),
+        TxOutput::new(200, [1; 32]),
+    ];
+
+    let mut tx = Transaction::new(inputs, outputs);
 
     wallet.sign_transaction(&mut tx);
 
-    println!("Transaction ID: {}", tx.id);
-    println!("Transaction Hash: {}", tx.hash());
+    println!("Transaction ID: {:?}", tx.id);
     block.add_tx(tx);
 
     mine(&mut block);
 
-    println!("{:?}", block.digest);
-    println!("{:?}", block.timestamp);
+    println!("Block Digest: {:?}", block.digest);
+    println!("Block Timestamp: {:?}", block.timestamp);
 
     blockchain.add_block(block).expect("Failed to add block");
 
@@ -50,7 +59,19 @@ mod tests {
         let wallet = Wallet::new();
         let mut blockchain = Blockchain::new();
         let mut block = blockchain.next_block();
-        let mut tx = Transaction::new(wallet.address.clone(), wallet.address.clone(), 42.0);
+
+        let inputs = vec![
+            TxInput::new_unsigned([0; 32], 2, [0; 33]),
+            TxInput::new_unsigned([0; 32], 1, [0; 33]),
+        ];
+
+        let outputs = vec![
+            TxOutput::new(100, [0; 32]),
+            TxOutput::new(200, [1; 32]),
+        ];
+
+        let mut tx = Transaction::new(inputs, outputs);
+
         wallet.sign_transaction(&mut tx);
         block.add_tx(tx);
         mine(&mut block);
@@ -115,7 +136,18 @@ mod tests {
         block.update_nonce_and_timestamp();
         assert_ne!(block.digest, old_digest);
 
-        let tx = Transaction::new(wallet.address.clone(), wallet.address.clone(), 42.0);
+        let inputs = vec![
+            TxInput::new_unsigned([0; 32], 2, [0; 33]),
+            TxInput::new_unsigned([0; 32], 1, [0; 33]),
+        ];
+
+        let outputs = vec![
+            TxOutput::new(100, [0; 32]),
+            TxOutput::new(200, [1; 32]),
+        ];
+
+        let mut tx = Transaction::new(inputs, outputs);
+
         block.add_tx(tx);
         block.update_nonce_and_timestamp();
         assert_ne!(block.digest, old_digest);
@@ -125,52 +157,21 @@ mod tests {
     fn test_transaction_sign_and_verify() {
         let wallet = Wallet::new();
 
-        let mut tx = Transaction::new(
-            wallet.address.clone(),
-            wallet.address.clone(), //send to self for testing
-            42.0,
-        );
+        let inputs = vec![
+            TxInput::new_unsigned([0; 32], 2, [0; 33]),
+            TxInput::new_unsigned([0; 32], 1, [0; 33]),
+        ];
+
+        let outputs = vec![
+            TxOutput::new(100, [0; 32]),
+            TxOutput::new(200, [1; 32]),
+        ];
+
+        let mut tx = Transaction::new(inputs, outputs);
 
         wallet.sign_transaction(&mut tx);
 
-        assert!(!tx.signature.is_empty());
-        assert!(tx.verify_signature());
-    }
-
-    #[test]
-    fn test_invalid_transaction_signature_added() {
-        let mut blockchain = Blockchain::new();
-        let mut block = blockchain.next_block();
-        let wallet = Wallet::new();
-
-        let mut tx = Transaction::new(
-            wallet.address.clone(),
-            wallet.address.clone(), //send to self for testing
-            42.0,
-        );
-
-        tx.signature = String::from("invalid_signature");
-
-        block.add_tx(tx);
-        assert_eq!(blockchain.add_block(block), Err("Invalid block"));
-    }
-
-    #[test]
-    fn test_deserialise_transaction() {
-        let wallet = Wallet::new();
-        let tx = Transaction::new(
-            wallet.address.clone(),
-            wallet.address.clone(), //send to self for testing
-            42.0,
-        );
-
-        let serialised = tx.as_bincode();
-        let deserialised = Transaction::from_bincode(&serialised);
-
-        assert_eq!(tx.sender, deserialised.sender);
-        assert_eq!(tx.receiver, deserialised.receiver);
-        assert_eq!(tx.amount, deserialised.amount);
-        assert_eq!(tx.timestamp, deserialised.timestamp);
+        assert!(tx.verify().is_ok());
     }
 
     #[test]
