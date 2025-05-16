@@ -17,8 +17,8 @@ fn main() {
     let wallet = Wallet::new();
 
     let inputs = vec![
-        TxInput::new_unsigned([0; 32], 2, [0; 33]),
-        TxInput::new_unsigned([0; 32], 1, [0; 33]),
+        TxInput::new_unsigned([0; 32], 2),
+        TxInput::new_unsigned([0; 32], 1),
     ];
 
     let outputs = vec![
@@ -60,8 +60,8 @@ mod tests {
         let mut block = blockchain.next_block();
 
         let inputs = vec![
-            TxInput::new_unsigned([0; 32], 2, [0; 33]),
-            TxInput::new_unsigned([0; 32], 1, [0; 33]),
+            TxInput::new_unsigned([0; 32], 2),
+            TxInput::new_unsigned([0; 32], 1),
         ];
 
         let outputs = vec![
@@ -170,6 +170,31 @@ mod tests {
         wallet.sign_transaction(&mut tx);
 
         assert!(tx.verify().is_ok());
+    }
+
+        #[test]
+    fn test_transaction_invalid_signature() {
+        let wallet = Wallet::new();
+        let mut blockchain = Blockchain::new();
+
+        let mut block = blockchain.next_block();
+
+        let inputs = vec![
+            TxInput::new_unsigned([0; 32], 2),
+            TxInput::new_unsigned([0; 32], 1),
+        ];
+
+        let outputs = vec![
+            TxOutput::new(100, [0; 32]),
+            TxOutput::new(200, [1; 32]),
+        ];
+
+        let mut tx = Transaction::new(inputs, outputs);
+
+        block.add_tx(tx);
+        mine(&mut block);
+
+        assert_eq!(blockchain.add_block(block), Err("Invalid block"));
     }
 
     #[test]
