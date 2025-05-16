@@ -32,11 +32,22 @@ impl TxInput {
             k256::ecdsa::VerifyingKey::from_sec1_bytes(&self.pubkey).expect("Invalid public key");
 
         let signature =
-            k256::ecdsa::Signature::from_bytes(&self.signature.into()).expect("Invalid signature");
+            k256::ecdsa::Signature::from_bytes((&self.signature).into()).expect("Invalid signature");
 
         verify_key
             .verify(&tx_for_sign.sighash(), &signature)
             .is_ok()
+    }
+}
+
+impl TxInput {
+    pub fn new_unsigned(txid: [u8; 32], output: u16, pubkey: [u8; 33]) -> TxInput {
+        TxInput {
+            txid,
+            output,
+            signature: [0; 64],
+            pubkey,
+        }
     }
 }
 
@@ -73,6 +84,12 @@ impl From<TxInput> for TxInputForSign {
 struct TxOutput {
     pub value: u64,
     pub pkhash: [u8; 32],
+}
+
+impl TxOutput {
+    pub fn new(value: u64, pkhash: [u8; 32]) -> TxOutput {
+        TxOutput { value, pkhash }
+    }
 }
 
 pub struct Transaction {
@@ -134,29 +151,13 @@ mod tests {
     #[test]
     fn test_create_blank_transaction() {
         let inputs = vec![
-            TxInput {
-                txid: [0; 32],
-                output: 0,
-                signature: [0; 64],
-                pubkey: [0; 33],
-            },
-            TxInput {
-                txid: [1; 32],
-                output: 1,
-                signature: [0; 64],
-                pubkey: [0; 33],
-            },
+            TxInput::new_unsigned([0; 32], 2, [0; 33]),
+            TxInput::new_unsigned([0; 32], 1, [0; 33]),
         ];
 
         let outputs = vec![
-            TxOutput {
-                value: 100,
-                pkhash: [0; 32],
-            },
-            TxOutput {
-                value: 200,
-                pkhash: [0; 32],
-            },
+            TxOutput::new(100, [0; 32]),
+            TxOutput::new(200, [0; 32]),
         ];
 
         let transaction = Transaction::new(inputs, outputs);
@@ -169,29 +170,13 @@ mod tests {
         let wallet = Wallet::new();
 
         let inputs = vec![
-            TxInput {
-                txid: [0; 32],
-                output: 0,
-                signature: [0; 64],
-                pubkey: [0; 33],
-            },
-            TxInput {
-                txid: [0; 32],
-                output: 1,
-                signature: [0; 64],
-                pubkey: [0; 33],
-            },
+            TxInput::new_unsigned([0; 32], 2, [0; 33]),
+            TxInput::new_unsigned([0; 32], 1, [0; 33]),
         ];
 
         let outputs = vec![
-            TxOutput {
-                value: 100,
-                pkhash: wallet.pkhash,
-            },
-            TxOutput {
-                value: 200,
-                pkhash: wallet.pkhash,
-            },
+            TxOutput::new(100, [0; 32]),
+            TxOutput::new(200, [0; 32]),
         ];
 
         let mut transaction = Transaction::new(inputs, outputs);
