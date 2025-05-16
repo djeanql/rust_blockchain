@@ -25,18 +25,20 @@ impl TxInput {
         self.signature = signature.to_bytes().into();
     }
 
-    pub fn verify_signature(&self) -> bool {
+    pub fn verify_signature(&self) -> Result<(), TransactionError> {
         let tx_for_sign: TxInputForSign = self.clone().into();
 
         let verify_key =
-            k256::ecdsa::VerifyingKey::from_sec1_bytes(&self.pubkey).expect("Invalid public key");
+            k256::ecdsa::VerifyingKey::from_sec1_bytes(&self.pubkey).map_err(|_| TransactionError::InvalidPublicKey)?;
 
         let signature =
-            k256::ecdsa::Signature::from_bytes((&self.signature).into()).expect("Invalid signature");
+            k256::ecdsa::Signature::from_bytes((&self.signature).into()).map_err(|_| TransactionError::InvalidSignature)?;
 
         verify_key
             .verify(&tx_for_sign.sighash(), &signature)
-            .is_ok()
+            .map_err(|_| TransactionError::SignatureVerificationFailed)?;
+
+        Ok(())
     }
 }
 
@@ -91,6 +93,13 @@ impl TxOutput {
     }
 }
 
+#[derive(Debug)]
+pub enum TransactionError {
+    InvalidPublicKey,
+    InvalidSignature,
+    SignatureVerificationFailed,
+}
+
 pub struct Transaction {
     pub id: [u8; 32],
     pub timestamp: u64,
@@ -137,8 +146,11 @@ impl Transaction {
         self.id = self.hash();
     }
 
-    pub fn verify_signatures(&self) -> bool {
-        self.inputs.iter().all(|input| input.verify_signature())
+    pub fn verify_signatures(&self) -> Result<(), TransactionError> {
+        for input in &self.inputs {
+            input.verify_signature()?;
+        }
+        Ok(())
     }
 }
 
@@ -210,7 +222,7 @@ mod tests {
         assert!(transaction.inputs[0].signature != transaction.inputs[1].signature);
         assert!(transaction.id == transaction.hash());
 
-        assert!(transaction.verify_signatures());
+        assert!(transaction.verify_signatures().is_ok());
     }
 
     #[test]
@@ -233,7 +245,7 @@ mod tests {
 
         transaction.inputs[0].signature[0] = 1;
 
-        assert!(!transaction.verify_signatures());
+        assert!(transaction.verify_signatures().is_err());
     }
 
     #[test]
@@ -244,11 +256,11 @@ mod tests {
         );
         let wallet = Wallet::new();
         wallet.sign_utxo_based_transaction(&mut tx);
-        assert!(tx.verify_signatures());
+        assert!(tx.verify_signatures().is_ok());
 
         // tamper
         tx.inputs[0].signature[0] ^= 0xFF;
-        assert!(!tx.verify_signatures());
+        assert!(tx.verify_signatures().is_err());
     }
 
     #[test]
@@ -259,11 +271,11 @@ mod tests {
         );
         let wallet = Wallet::new();
         wallet.sign_utxo_based_transaction(&mut tx);
-        assert!(tx.verify_signatures());
+        assert!(tx.verify_signatures().is_ok());
 
         // tamper
         tx.inputs[0].pubkey[1] ^= 0xAA;
-        assert!(!tx.verify_signatures());
+        assert!(tx.verify_signatures().is_err());
     }
 
     #[test]
@@ -274,11 +286,11 @@ mod tests {
         );
         let wallet = Wallet::new();
         wallet.sign_utxo_based_transaction(&mut tx);
-        assert!(tx.verify_signatures());
+        assert!(tx.verify_signatures().is_ok());
 
         // tamper the TxInput’s `output` index
         tx.inputs[0].output = 3;
-        assert!(!tx.verify_signatures());
+        assert!(tx.verify_signatures().is_err());
     }
 
 }
