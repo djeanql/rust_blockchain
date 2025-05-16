@@ -5,6 +5,14 @@ use sha2::{Digest, Sha256};
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[derive(Debug, PartialEq)]
+pub enum BlockIntegrityError {
+    InvalidProofOfWork,
+    HashDigestMismatch,
+    TimestampInFuture,
+    InvalidTransactions(TransactionError),
+}
+
 #[derive(Encode)]
 struct BlockNoDigest<'a> {
     index: u32,
@@ -96,7 +104,7 @@ impl Block {
         format!("{:x}", hasher.finalize())
     }
 
-    fn update_digest(&mut self) {
+    pub fn update_digest(&mut self) {
         self.digest = self.hash();
     }
 
@@ -118,15 +126,30 @@ impl Block {
         self.update_digest();
     }
 
-    pub fn validate(&self) -> bool {
-        self.hash() < self.target
-            && self.digest == self.hash()
-            && self.timestamp
-                <= SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs()
-            && self.validate_transactions().is_ok()
+    pub fn validate(&self) -> Result<(), BlockIntegrityError> {
+        if self.hash() >= self.target {
+            return Err(BlockIntegrityError::InvalidProofOfWork);
+        }
+        if self.digest != self.hash() {
+            return Err(BlockIntegrityError::HashDigestMismatch);
+        }
+        if self.timestamp
+            > SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        {
+            return Err(BlockIntegrityError::TimestampInFuture);
+        }
+
+        let result = self.validate_transactions();
+        if result.is_err() {
+            return Err(BlockIntegrityError::InvalidTransactions(result.err().unwrap()));
+        }
+
+        self.validate_transactions().map_err(|e| BlockIntegrityError::InvalidTransactions(e))?;
+
+        Ok(())
     }
 
     fn validate_transactions(&self) -> Result<(), TransactionError> {

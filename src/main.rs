@@ -3,8 +3,9 @@ mod blockchain;
 mod transaction;
 mod utils;
 mod wallet;
-use blockchain::Blockchain;
-use transaction::{Transaction, TxInput, TxOutput};
+use block::BlockIntegrityError;
+use blockchain::{Blockchain, BlockValidationError};
+use transaction::{Transaction, TransactionError, TxInput, TxOutput};
 use utils::*;
 use wallet::Wallet;
 
@@ -38,11 +39,11 @@ fn main() {
     println!("Block Digest: {:?}", block.digest);
     println!("Block Timestamp: {:?}", block.timestamp);
 
-    blockchain.add_block(block).expect("Failed to add block");
+    blockchain.add_block(block).unwrap();
 
     let mut block2 = blockchain.next_block();
     mine(&mut block2);
-    blockchain.add_block(block2).expect("Failed to add block");
+    blockchain.add_block(block2).unwrap();
 
     println!("{}", blockchain);
 }
@@ -50,6 +51,8 @@ fn main() {
 //TODO: separate out the tests into separate modules
 #[cfg(test)]
 mod tests {
+    use std::result;
+
     use super::*;
     use block::Block;
 
@@ -78,11 +81,11 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_hash() {
+    fn test_invalid_pow() {
         let mut blockchain = Blockchain::new();
         assert_eq!(
             blockchain.add_block(blockchain.next_block()),
-            Err("Invalid block")
+            Err(BlockValidationError::Integrity(BlockIntegrityError::InvalidProofOfWork))
         )
     }
 
@@ -92,7 +95,7 @@ mod tests {
         let mut block = blockchain.next_block();
         block.index = 2;
         mine(&mut block);
-        assert_eq!(blockchain.add_block(block), Err("Invalid block"))
+        assert_eq!(blockchain.add_block(block), Err(BlockValidationError::InvalidIndex));
     }
 
     #[test]
@@ -109,8 +112,9 @@ mod tests {
         while block2.hash() > block2.target {
             block2.nonce += 1;
         }
+        block2.update_digest();
 
-        assert_eq!(blockchain.add_block(block2), Err("Invalid block"))
+        assert_eq!(blockchain.add_block(block2), Err(BlockValidationError::InvalidTimestamp))
     }
 
     #[test]
@@ -119,7 +123,7 @@ mod tests {
         let mut block = blockchain.next_block();
         block.prev_hash = String::from("invalid_hash");
         mine(&mut block);
-        assert_eq!(blockchain.add_block(block), Err("Invalid block"))
+        assert_eq!(blockchain.add_block(block), Err(BlockValidationError::InvalidPreviousHash))
     }
 
     #[test]
@@ -172,7 +176,7 @@ mod tests {
         assert!(tx.verify().is_ok());
     }
 
-        #[test]
+    #[test]
     fn test_transaction_invalid_signature() {
         let wallet = Wallet::new();
         let mut blockchain = Blockchain::new();
@@ -194,7 +198,11 @@ mod tests {
         block.add_tx(tx);
         mine(&mut block);
 
-        assert_eq!(blockchain.add_block(block), Err("Invalid block"));
+        let result = blockchain.add_block(block);
+        
+        assert!(result == Err(BlockValidationError::Integrity(BlockIntegrityError::InvalidTransactions(TransactionError::InvalidSignature))) ||
+            result == Err(BlockValidationError::Integrity(BlockIntegrityError::InvalidTransactions(TransactionError::InvalidPublicKey)))
+        );
     }
 
     #[test]

@@ -1,5 +1,13 @@
-use crate::block::Block;
+use crate::block::{Block, BlockIntegrityError};
 use std::fmt;
+
+#[derive(Debug, PartialEq)]
+pub enum BlockValidationError {
+    Integrity(BlockIntegrityError),
+    InvalidPreviousHash,
+    InvalidIndex,
+    InvalidTimestamp,
+}
 
 pub struct Blockchain {
     chain: Vec<Block>,
@@ -28,21 +36,25 @@ impl Blockchain {
         )
     }
 
-    pub fn add_block(&mut self, block: Block) -> Result<(), &str> {
-        if self.validate_block(&block) {
-            self.chain.push(block);
-            Ok(())
-        } else {
-            Err("Invalid block")
-        }
+    pub fn add_block(&mut self, block: Block) -> Result<(), BlockValidationError> {
+        self.validate_block(&block)?;
+        self.chain.push(block);
+        Ok(())
     }
 
-    //TODO: custom error types
-    pub fn validate_block(&self, block: &Block) -> bool {
-        block.validate()
-            && block.prev_hash == self.prev_hash()
-            && block.index == self.chain.last().unwrap().index + 1
-            && block.timestamp >= self.chain.last().unwrap().timestamp
+    pub fn validate_block(&self, block: &Block) -> Result<(), BlockValidationError> {
+        block.validate().map_err(|e| BlockValidationError::Integrity(e))?;
+
+        if block.prev_hash != self.prev_hash() {
+            return Err(BlockValidationError::InvalidPreviousHash);
+        }
+        if block.index != self.chain.last().unwrap().index + 1 {
+            return Err(BlockValidationError::InvalidIndex);
+        }
+        if block.timestamp < self.chain.last().unwrap().timestamp {
+            return Err(BlockValidationError::InvalidTimestamp);
+        }
+        Ok(())
     }
 
     pub fn prev_hash(&self) -> String {

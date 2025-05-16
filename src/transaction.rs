@@ -94,7 +94,7 @@ impl TxOutput {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TransactionError {
     InvalidPublicKey,
     InvalidSignature,
