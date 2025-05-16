@@ -11,7 +11,7 @@ use sha2::{Digest, Sha256};
 struct TxInput {
     pub txid: [u8; 32],
     pub output: u16,
-    pub signature: Vec<u8>,
+    pub signature: [u8; 64],
     pub pubkey: [u8; 33],
 }
 
@@ -22,7 +22,7 @@ impl TxInput {
         let tx_for_sign: TxInputForSign = self.clone().into();
         
         let signature: Signature = signing_key.sign(&tx_for_sign.sighash());
-        self.signature = signature.to_der().as_bytes().to_vec();
+        self.signature = signature.to_bytes().into();
     }
 
     pub fn verify_signature(&self) -> bool {
@@ -32,7 +32,7 @@ impl TxInput {
             k256::ecdsa::VerifyingKey::from_sec1_bytes(&self.pubkey).expect("Invalid public key");
 
         let signature =
-            k256::ecdsa::Signature::from_der(&self.signature).expect("Invalid DER signature");
+            k256::ecdsa::Signature::from_bytes(&self.signature.into()).expect("Invalid signature");
 
         verify_key
             .verify(&tx_for_sign.sighash(), &signature)
@@ -137,13 +137,13 @@ mod tests {
             TxInput {
                 txid: [0; 32],
                 output: 0,
-                signature: "signature1".as_bytes().to_vec(),
+                signature: [0; 64],
                 pubkey: [0; 33],
             },
             TxInput {
                 txid: [1; 32],
                 output: 1,
-                signature: "signature2".as_bytes().to_vec(),
+                signature: [0; 64],
                 pubkey: [0; 33],
             },
         ];
@@ -172,13 +172,13 @@ mod tests {
             TxInput {
                 txid: [0; 32],
                 output: 0,
-                signature: Vec::new(),
+                signature: [0; 64],
                 pubkey: [0; 33],
             },
             TxInput {
                 txid: [0; 32],
                 output: 1,
-                signature: Vec::new(),
+                signature: [0; 64],
                 pubkey: [0; 33],
             },
         ];
