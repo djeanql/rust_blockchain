@@ -217,8 +217,8 @@ mod tests {
     #[test]
     fn test_create_blank_transaction() {
         let inputs = vec![
-            TxInput::new_unsigned([0; 32], 2, [0; 33]),
-            TxInput::new_unsigned([0; 32], 1, [0; 33]),
+            TxInput::new_unsigned([0; 32], 2),
+            TxInput::new_unsigned([0; 32], 1),
         ];
 
         let outputs = vec![
@@ -237,8 +237,8 @@ mod tests {
         let wallet = Wallet::new();
 
         let inputs = vec![
-            TxInput::new_unsigned([0; 32], 2, [0; 33]),
-            TxInput::new_unsigned([0; 32], 1, [0; 33]),
+            TxInput::new_unsigned([0; 32], 2),
+            TxInput::new_unsigned([0; 32], 1),
         ];
 
         let outputs = vec![
@@ -263,8 +263,8 @@ mod tests {
         let wallet = Wallet::new();
 
         let inputs = vec![
-            TxInput::new_unsigned([0; 32], 2, [0; 33]),
-            TxInput::new_unsigned([0; 32], 1, [0; 33]),
+            TxInput::new_unsigned([0; 32], 2),
+            TxInput::new_unsigned([0; 32], 1),
         ];
 
         let outputs = vec![
@@ -284,7 +284,7 @@ mod tests {
     #[test]
     fn test_fails_if_signature_tampered() {
         let mut tx = Transaction::new(
-            vec![TxInput::new_unsigned([0;32], 0, [0;33])],
+            vec![TxInput::new_unsigned([0;32], 0)],
             vec![TxOutput::new(50, [0;32])]
         );
         let wallet = Wallet::new();
@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn test_fails_if_pubkey_tampered() {
         let mut tx = Transaction::new(
-            vec![TxInput::new_unsigned([0;32], 0, [0;33])],
+            vec![TxInput::new_unsigned([0;32], 0)],
             vec![TxOutput::new(50, [0;32])]
         );
         let wallet = Wallet::new();
@@ -316,7 +316,7 @@ mod tests {
     #[test]
     fn test_fails_if_input_data_tampered() {
         let mut tx = Transaction::new(
-            vec![TxInput::new_unsigned([1;32], 2, [0;33])],
+            vec![TxInput::new_unsigned([1;32], 2)],
             vec![TxOutput::new(50, [0;32])]
         );
         let wallet = Wallet::new();
