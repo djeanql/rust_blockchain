@@ -248,7 +248,7 @@ mod tests {
 
         let mut transaction = Transaction::new(inputs, outputs);
 
-        wallet.sign_utxo_based_transaction(&mut transaction);
+        wallet.sign_transaction(&mut transaction);
 
         assert!(!transaction.id.is_empty());
         assert!(!transaction.inputs[0].signature.is_empty());
@@ -274,7 +274,7 @@ mod tests {
 
         let mut transaction = Transaction::new(inputs, outputs);
 
-        wallet.sign_utxo_based_transaction(&mut transaction);
+        wallet.sign_transaction(&mut transaction);
 
         transaction.inputs[0].signature[0] = 1;
 
@@ -288,7 +288,7 @@ mod tests {
             vec![TxOutput::new(50, [0;32])]
         );
         let wallet = Wallet::new();
-        wallet.sign_utxo_based_transaction(&mut tx);
+        wallet.sign_transaction(&mut tx);
         assert!(tx.verify().is_ok());
 
         // tamper
@@ -303,7 +303,7 @@ mod tests {
             vec![TxOutput::new(50, [0;32])]
         );
         let wallet = Wallet::new();
-        wallet.sign_utxo_based_transaction(&mut tx);
+        wallet.sign_transaction(&mut tx);
         assert!(tx.verify().is_ok());
 
         // tamper
@@ -320,7 +320,7 @@ mod tests {
             vec![TxOutput::new(50, [0;32])]
         );
         let wallet = Wallet::new();
-        wallet.sign_utxo_based_transaction(&mut tx);
+        wallet.sign_transaction(&mut tx);
         assert!(tx.verify().is_ok());
 
         // tamper the TxInput’s `output` index
