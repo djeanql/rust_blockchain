@@ -245,7 +245,7 @@ mod tests {
 
         transaction.inputs[0].signature[0] = 1;
 
-        assert!(transaction.verify_signatures().is_err());
+        assert!(matches!(transaction.verify_signatures(), Err(TransactionError::SignatureVerificationFailed)));
     }
 
     #[test]
@@ -260,7 +260,7 @@ mod tests {
 
         // tamper
         tx.inputs[0].signature[0] ^= 0xFF;
-        assert!(tx.verify_signatures().is_err());
+        assert!(matches!(tx.verify_signatures(), Err(TransactionError::SignatureVerificationFailed)));
     }
 
     #[test]
@@ -275,7 +275,9 @@ mod tests {
 
         // tamper
         tx.inputs[0].pubkey[1] ^= 0xAA;
-        assert!(tx.verify_signatures().is_err());
+        let result = tx.verify_signatures();
+        assert!(matches!(result, Err(TransactionError::SignatureVerificationFailed)) ||
+                matches!(result, Err(TransactionError::InvalidPublicKey)));
     }
 
     #[test]
@@ -290,7 +292,7 @@ mod tests {
 
         // tamper the TxInput’s `output` index
         tx.inputs[0].output = 3;
-        assert!(tx.verify_signatures().is_err());
+        assert!(matches!(tx.verify_signatures(), Err(TransactionError::SignatureVerificationFailed)));
     }
 
 }
