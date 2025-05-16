@@ -12,12 +12,13 @@ struct TxInput {
     pub txid: [u8; 32],
     pub output: u16,
     pub signature: Vec<u8>,
-    pub pubkey: Vec<u8>,
+    pub pubkey: [u8; 33],
 }
 
 impl TxInput {
     pub fn sign(&mut self, signing_key: &SigningKey) {
-        self.pubkey = signing_key.verifying_key().to_encoded_point(false).as_bytes().to_vec();
+        self.pubkey = signing_key.verifying_key().to_encoded_point(true).as_bytes().try_into().unwrap();
+
         let tx_for_sign: TxInputForSign = self.clone().into();
         
         let signature: Signature = signing_key.sign(&tx_for_sign.sighash());
@@ -43,7 +44,7 @@ impl TxInput {
 pub struct TxInputForSign {
     pub txid: [u8; 32],
     pub output: u16,
-    pub pubkey: Vec<u8>,
+    pub pubkey: [u8; 33],
 }
 
 impl TxInputForSign {
@@ -71,7 +72,7 @@ impl From<TxInput> for TxInputForSign {
 #[derive(Encode, Decode, Clone)]
 struct TxOutput {
     pub value: u64,
-    pub receiver_pk: Vec<u8>,
+    pub pkhash: [u8; 32],
 }
 
 pub struct Transaction {
@@ -131,30 +132,30 @@ mod tests {
     use crate::wallet::Wallet;
 
     #[test]
-    fn test_create_transaction() {
+    fn test_create_blank_transaction() {
         let inputs = vec![
             TxInput {
                 txid: [0; 32],
                 output: 0,
                 signature: "signature1".as_bytes().to_vec(),
-                pubkey: "pubkey".as_bytes().to_vec(),
+                pubkey: [0; 33],
             },
             TxInput {
                 txid: [1; 32],
                 output: 1,
                 signature: "signature2".as_bytes().to_vec(),
-                pubkey: "pubkey".as_bytes().to_vec(),
+                pubkey: [0; 33],
             },
         ];
 
         let outputs = vec![
             TxOutput {
                 value: 100,
-                receiver_pk: "receiver_pk1".as_bytes().to_vec(),
+                pkhash: [0; 32],
             },
             TxOutput {
                 value: 200,
-                receiver_pk: "receiver_pk2".as_bytes().to_vec(),
+                pkhash: [0; 32],
             },
         ];
 
@@ -172,24 +173,24 @@ mod tests {
                 txid: [0; 32],
                 output: 0,
                 signature: Vec::new(),
-                pubkey: Vec::new(),
+                pubkey: [0; 33],
             },
             TxInput {
                 txid: [0; 32],
                 output: 1,
                 signature: Vec::new(),
-                pubkey: Vec::new(),
+                pubkey: [0; 33],
             },
         ];
 
         let outputs = vec![
             TxOutput {
                 value: 100,
-                receiver_pk: wallet.address.as_bytes().to_vec(),
+                pkhash: wallet.pkhash,
             },
             TxOutput {
                 value: 200,
-                receiver_pk: wallet.address.as_bytes().to_vec(),
+                pkhash: wallet.pkhash,
             },
         ];
 
