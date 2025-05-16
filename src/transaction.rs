@@ -20,14 +20,14 @@ impl TxInput {
     pub fn sign(&mut self, signing_key: &SigningKey) {
         self.pubkey = signing_key.verifying_key().to_encoded_point(true).as_bytes().try_into().unwrap();
 
-        let tx_for_sign: TxInputForSign = self.clone().into();
+        let tx_for_sign: TxInputForSign = (&*self).into();
         
         let signature: Signature = signing_key.sign(&tx_for_sign.sighash());
         self.signature = signature.to_bytes().into();
     }
 
     pub fn verify_signature(&self) -> Result<(), TransactionError> {
-        let tx_for_sign: TxInputForSign = self.clone().into();
+        let tx_for_sign: TxInputForSign = self.into();
 
         let verify_key =
             k256::ecdsa::VerifyingKey::from_sec1_bytes(&self.pubkey).map_err(|_| TransactionError::InvalidPublicKey)?;
@@ -54,14 +54,14 @@ impl TxInput {
     }
 }
 
-#[derive(Encode, Decode, Debug)]
-pub struct TxInputForSign {
-    pub txid: [u8; 32],
-    pub output: u16,
-    pub pubkey: [u8; 33],
+#[derive(Encode, Debug)]
+pub struct TxInputForSign<'a> {
+    pub txid: &'a [u8; 32],
+    pub output: &'a u16,
+    pub pubkey: &'a [u8; 33],
 }
 
-impl TxInputForSign {
+impl TxInputForSign<'_> {
     fn as_bincode(&self) -> Vec<u8> {
         bincode::encode_to_vec(self, bincode::config::standard()).unwrap()
     }
@@ -72,12 +72,12 @@ impl TxInputForSign {
     }
 }
 
-impl From<TxInput> for TxInputForSign {
-    fn from(input: TxInput) -> Self {
+impl<'a> From<&'a TxInput> for TxInputForSign<'a> {
+    fn from(input: &'a TxInput) -> Self {
         TxInputForSign {
-            txid: input.txid,
-            output: input.output,
-            pubkey: input.pubkey,
+            txid: &input.txid,
+            output: &input.output,
+            pubkey: &input.pubkey,
         }
     }
 }
@@ -106,11 +106,11 @@ pub enum TransactionError {
     DuplicateOutput,
 }
 
-#[derive(Encode, Decode, Clone)]
-struct TransactionNoID {
-    inputs: Vec<TxInput>,
-    outputs: Vec<TxOutput>,
-    pub timestamp: u64,
+#[derive(Encode, Clone)]
+struct TransactionNoID<'a> {
+    inputs: &'a Vec<TxInput>,
+    outputs: &'a Vec<TxOutput>,
+    pub timestamp: &'a u64,
 }
 
 #[derive(Encode, Decode)]
@@ -133,9 +133,9 @@ impl Transaction {
 
     fn as_bincode_no_id(&self) -> Vec<u8> {
         let no_id = TransactionNoID {
-            inputs: self.inputs.clone(),
-            outputs: self.outputs.clone(),
-            timestamp: self.timestamp,
+            inputs: &self.inputs,
+            outputs: &self.outputs,
+            timestamp: &self.timestamp,
         };
 
         bincode::encode_to_vec(no_id, bincode::config::standard()).unwrap()
