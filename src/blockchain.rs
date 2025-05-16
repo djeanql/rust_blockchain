@@ -3,7 +3,7 @@ use std::fmt;
 
 pub struct Blockchain {
     chain: Vec<Block>,
-    pub target: String,
+    target: String,
 }
 
 //TODO: add difficulty adjustment
@@ -37,6 +37,7 @@ impl Blockchain {
         }
     }
 
+    //TODO: custom error types
     pub fn validate_block(&self, block: &Block) -> bool {
         block.validate()
             && block.prev_hash == self.prev_hash()

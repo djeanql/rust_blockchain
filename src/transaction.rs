@@ -1,4 +1,4 @@
-use crate::{transaction, utils};
+use crate::utils;
 use bincode::{Decode, Encode};
 use k256::ecdsa::signature::Verifier;
 use k256::ecdsa::{Signature, SigningKey, signature::Signer};
@@ -6,6 +6,7 @@ use sha2::{Digest, Sha256};
 use std::fmt;
 
 //TODO: use ed25519
+//TODO: use references instead of copying
 
 #[derive(Encode, Decode, Clone)]
 pub struct TxInput {
@@ -100,7 +101,6 @@ pub enum TransactionError {
     SignatureVerificationFailed,
     InvalidID,
     InvalidTimestamp,
-    Overspending,
     ZeroValueOutput,
     DuplicateInput,
     DuplicateOutput,

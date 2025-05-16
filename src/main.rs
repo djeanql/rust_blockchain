@@ -30,7 +30,7 @@ fn main() {
 
     wallet.sign_transaction(&mut tx);
 
-    println!("Transaction ID: {:?}", tx.id);
+    println!("Transaction ID: {}", hex::encode(tx.id));
     block.add_tx(tx);
 
     mine(&mut block);
@@ -124,7 +124,6 @@ mod tests {
 
     #[test]
     fn test_digest_update() {
-        let wallet = Wallet::new();
         let mut block = Block::new(
             0,
             String::from(""),
@@ -145,7 +144,7 @@ mod tests {
             TxOutput::new(200, [1; 32]),
         ];
 
-        let mut tx = Transaction::new(inputs, outputs);
+        let tx = Transaction::new(inputs, outputs);
 
         block.add_tx(tx);
         block.update_nonce_and_timestamp();

@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 
 pub struct Wallet {
     signing_key: SigningKey,
-    pub verifying_key: VerifyingKey,
+    verifying_key: VerifyingKey,
     pub pkhash: [u8; 32],
     pub address: String,
 }
