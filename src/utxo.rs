@@ -3,9 +3,9 @@ use bincode::{Decode, Encode};
 use k256::ecdsa::signature::Verifier;
 use k256::ecdsa::{Signature, SigningKey, signature::Signer};
 use sha2::{Digest, Sha256};
+use std::fmt;
 
 //TODO: use ed25519
-//TODO: use bytes instead of strings
 
 #[derive(Encode, Decode, Clone)]
 struct TxInput {
@@ -79,7 +79,6 @@ impl From<TxInput> for TxInputForSign {
     }
 }
 
-//TODO: use public key hash
 #[derive(Encode, Decode, Clone)]
 struct TxOutput {
     pub value: u64,
@@ -143,6 +142,28 @@ impl Transaction {
     }
 }
 
+impl fmt::Display for Transaction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "Transaction ID: {}", hex::encode(self.id))?;
+        writeln!(f, "Timestamp: {}", self.timestamp)?;
+        writeln!(f, "Inputs:")?;
+        for input in &self.inputs {
+            writeln!(f, "  TxID: {}, Output: {}, Signature: {}, Pubkey: {}",
+                hex::encode(input.txid),
+                input.output,
+                hex::encode(input.signature),
+                hex::encode(input.pubkey))?;
+        }
+        writeln!(f, "Outputs:")?;
+        for output in &self.outputs {
+            writeln!(f, "  Value: {}, PKHash: {}",
+                output.value,
+                hex::encode(output.pkhash))?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,6 +182,7 @@ mod tests {
         ];
 
         let transaction = Transaction::new(inputs, outputs);
+        println!("{}", transaction);
         assert_eq!(transaction.inputs.len(), 2);
         assert_eq!(transaction.outputs.len(), 2);
     }
@@ -245,7 +267,7 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_fails_if_input_data_tampered() {
+    fn test_fails_if_input_data_tampered() {
         let mut tx = Transaction::new(
             vec![TxInput::new_unsigned([1;32], 2, [0;33])],
             vec![TxOutput::new(50, [0;32])]
@@ -258,6 +280,5 @@ mod tests {
         tx.inputs[0].output = 3;
         assert!(!tx.verify_signatures());
     }
-
 
 }
