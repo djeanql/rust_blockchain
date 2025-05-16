@@ -2,10 +2,9 @@ mod block;
 mod blockchain;
 mod transaction;
 mod utils;
-mod utxo;
 mod wallet;
 use blockchain::Blockchain;
-use utxo::{Transaction, TxInput, TxOutput};
+use transaction::{Transaction, TxInput, TxOutput};
 use utils::*;
 use wallet::Wallet;
 

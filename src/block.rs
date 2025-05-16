@@ -1,4 +1,4 @@
-use crate::utxo::{Transaction, TransactionError};
+use crate::transaction::{Transaction, TransactionError};
 use crate::utils;
 use bincode::{Decode, Encode};
 use sha2::{Digest, Sha256};

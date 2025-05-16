@@ -1,4 +1,4 @@
-use crate::utxo::Transaction;
+use crate::transaction::Transaction;
 use k256::ecdsa::{SigningKey, VerifyingKey};
 use sha2::{Digest, Sha256};
 
