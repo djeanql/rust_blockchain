@@ -44,12 +44,12 @@ impl TxInput {
 }
 
 impl TxInput {
-    pub fn new_unsigned(txid: [u8; 32], output: u16, pubkey: [u8; 33]) -> TxInput {
+    pub fn new_unsigned(txid: [u8; 32], output: u16) -> TxInput {
         TxInput {
             txid,
             output,
             signature: [0; 64],
-            pubkey,
+            pubkey: [0; 33],
         }
     }
 }

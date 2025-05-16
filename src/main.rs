@@ -135,8 +135,8 @@ mod tests {
         assert_ne!(block.digest, old_digest);
 
         let inputs = vec![
-            TxInput::new_unsigned([0; 32], 2, [0; 33]),
-            TxInput::new_unsigned([0; 32], 1, [0; 33]),
+            TxInput::new_unsigned([0; 32], 2),
+            TxInput::new_unsigned([0; 32], 1),
         ];
 
         let outputs = vec![
@@ -156,8 +156,8 @@ mod tests {
         let wallet = Wallet::new();
 
         let inputs = vec![
-            TxInput::new_unsigned([0; 32], 2, [0; 33]),
-            TxInput::new_unsigned([0; 32], 1, [0; 33]),
+            TxInput::new_unsigned([0; 32], 2),
+            TxInput::new_unsigned([0; 32], 1),
         ];
 
         let outputs = vec![
