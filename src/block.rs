@@ -174,3 +174,45 @@ impl fmt::Display for Block {
         Ok(())
     }
 }
+
+mod tests {
+    use crate::utils::mine;
+
+    use super::*;
+
+    #[test]
+    fn test_invalid_pow() {
+        let block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
+        assert_eq!(block.validate(), Err(BlockIntegrityError::InvalidProofOfWork));
+    }
+
+    #[test]
+    fn test_invalid_digest() {
+        let mut block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
+        mine(&mut block);
+        block.digest = String::new();
+        assert_eq!(block.validate(), Err(BlockIntegrityError::HashDigestMismatch));
+    }
+
+    #[test]
+    fn test_invalid_timestamp() {
+        let mut block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
+        block.timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + 1000;
+
+        while !utils::hash_less_than_target(&block.digest, &block.target) {
+            block.nonce += 1;
+            block.update_digest();
+        }
+
+        assert_eq!(block.validate(), Err(BlockIntegrityError::TimestampInFuture));
+    }
+
+    #[test]
+    fn test_invalid_transactions() {
+        let mut block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
+        let tx = Transaction::new(vec![], vec![]);
+        block.add_tx(tx);
+        mine(&mut block);
+        assert_eq!(block.validate(), Err(BlockIntegrityError::InvalidTransactions(TransactionError::InvalidID)));
+    }
+}
