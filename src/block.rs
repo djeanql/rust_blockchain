@@ -213,6 +213,6 @@ mod tests {
         let tx = Transaction::new(vec![], vec![]);
         block.add_tx(tx);
         mine(&mut block);
-        assert_eq!(block.validate(), Err(BlockIntegrityError::InvalidTransactions(TransactionError::InvalidID)));
+        assert_eq!(block.validate(), Err(BlockIntegrityError::InvalidTransactions(TransactionError::EmptyInputs)));
     }
 }

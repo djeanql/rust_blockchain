@@ -104,6 +104,8 @@ pub enum TransactionError {
     ZeroValueOutput,
     DuplicateInput,
     DuplicateOutput,
+    EmptyInputs,
+    EmptyOutputs
 }
 
 #[derive(Encode, Clone)]
@@ -161,13 +163,14 @@ impl Transaction {
     }
 
     pub fn verify(&self) -> Result<(), TransactionError> {
-        self.verify_signatures()?;
-        
-        if self.id != self.hash() {
-            return Err(TransactionError::InvalidID);
-        } else if self.timestamp > utils::unix_timestamp() {
-            return Err(TransactionError::InvalidTimestamp);
+
+        if self.inputs.is_empty() {
+            return Err(TransactionError::EmptyInputs);
+        } else if self.outputs.is_empty() {
+            return Err(TransactionError::EmptyOutputs);
         }
+
+        self.verify_signatures()?;
         
         for input in &self.inputs {
             if self.inputs.iter().filter(|i| i.txid == input.txid && i.output == input.output).count() > 1 {
@@ -183,6 +186,13 @@ impl Transaction {
                 return Err(TransactionError::DuplicateOutput);
             }
         }
+
+        if self.id != self.hash() {
+            return Err(TransactionError::InvalidID);
+        } else if self.timestamp > utils::unix_timestamp() {
+            return Err(TransactionError::InvalidTimestamp);
+        }
+
         Ok(())
     }
 }
