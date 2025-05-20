@@ -20,6 +20,10 @@ impl Blockchain {
         }
     }
 
+    pub fn get_block_reward(&self) -> u64 {
+        50_000_000
+    }
+
     pub fn next_block(&self) -> Block {
         Block::new(
             self.chain.len() as u32,

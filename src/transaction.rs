@@ -120,6 +120,17 @@ impl Transaction {
         }
     }
 
+    pub fn new_coinbase(miner_pkhash: [u8; 32], reward: u64) -> Transaction {
+        let mut tx = Transaction {
+            id: [0; 32],
+            timestamp: utils::unix_timestamp(),
+            inputs: Vec::new(),
+            outputs: vec![TxOutput::new(reward, miner_pkhash)],
+        };
+        tx.id = tx.hash();
+        tx
+    }
+
     fn as_bincode_no_id(&self) -> Vec<u8> {
         let no_id = TransactionNoID {
             inputs: &self.inputs,
@@ -178,6 +189,13 @@ impl Transaction {
             return Err(TransactionError::InvalidID);
         } else if self.timestamp > utils::unix_timestamp() {
             return Err(TransactionError::InvalidTimestamp);
+        }
+
+        Ok(())
+    }
+    pub fn verify_coinbase(&self) -> Result<(), TransactionError> {
+        if self.inputs.len() != 0 || self.outputs.len() != 1 || self.id != self.hash() {
+            return Err(TransactionError::InvalidCoinbase);
         }
 
         Ok(())

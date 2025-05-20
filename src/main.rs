@@ -35,7 +35,7 @@ fn main() {
     println!("Transaction ID: {}", hex::encode(tx.id));
     block.add_tx(tx);
 
-    mine(&mut block);
+    mine(&mut block, wallet.pkhash, blockchain.get_block_reward());
 
     println!("Block Digest: {:?}", block.digest);
     println!("Block Timestamp: {:?}", block.timestamp);
@@ -43,7 +43,7 @@ fn main() {
     blockchain.add_block(block).unwrap();
 
     let mut block2 = blockchain.next_block();
-    mine(&mut block2);
+    mine(&mut block2, wallet.pkhash, blockchain.get_block_reward());
     blockchain.add_block(block2).unwrap();
 
     println!("{}", blockchain);
@@ -52,8 +52,6 @@ fn main() {
 //TODO: separate out the tests into separate modules
 #[cfg(test)]
 mod tests {
-    use std::result;
-
     use super::*;
     use block::Block;
 
@@ -77,8 +75,8 @@ mod tests {
 
         wallet.sign_transaction(&mut tx);
         block.add_tx(tx);
-        mine(&mut block);
-        assert!(blockchain.add_block(block).is_ok());
+        mine(&mut block, wallet.pkhash, blockchain.get_block_reward());
+        assert_eq!(blockchain.add_block(block), Ok(()));
     }
 
     #[test]
@@ -95,7 +93,7 @@ mod tests {
         let mut blockchain = Blockchain::new();
         let mut block = blockchain.next_block();
         block.index = 2;
-        mine(&mut block);
+        mine(&mut block, [0; 32], blockchain.get_block_reward());
         assert_eq!(blockchain.add_block(block), Err(BlockValidationError::InvalidIndex));
     }
 
@@ -104,12 +102,13 @@ mod tests {
         let mut blockchain = Blockchain::new();
         let mut block = blockchain.next_block();
         block.timestamp = utils::unix_timestamp();
-        mine(&mut block);
+        mine(&mut block, [0; 32], blockchain.get_block_reward());
         blockchain.add_block(block).unwrap();
         println!("{}", blockchain);
 
         let mut block2 = blockchain.next_block();
         block2.timestamp = 1000;
+        block2.add_coinbase_tx([0; 32], 0);
         while block2.hash() > block2.target {
             block2.nonce += 1;
         }
@@ -123,7 +122,7 @@ mod tests {
         let mut blockchain = Blockchain::new();
         let mut block = blockchain.next_block();
         block.prev_hash = String::from("invalid_hash");
-        mine(&mut block);
+        mine(&mut block, [0; 32], blockchain.get_block_reward());
         assert_eq!(blockchain.add_block(block), Err(BlockValidationError::InvalidPreviousHash))
     }
 
@@ -179,7 +178,6 @@ mod tests {
 
     #[test]
     fn test_transaction_invalid_signature() {
-        let wallet = Wallet::new();
         let mut blockchain = Blockchain::new();
 
         let mut block = blockchain.next_block();
@@ -194,10 +192,10 @@ mod tests {
             TxOutput::new(200, [1; 32]),
         ];
 
-        let mut tx = Transaction::new(inputs, outputs);
+        let tx = Transaction::new(inputs, outputs);
 
         block.add_tx(tx);
-        mine(&mut block);
+        mine(&mut block, [0; 32], blockchain.get_block_reward());
 
         let result = blockchain.add_block(block);
         

@@ -119,6 +119,11 @@ impl Block {
         self.update_digest();
     }
 
+    pub fn add_coinbase_tx(&mut self, pkhash: [u8; 32], reward: u64) {
+        self.transactions.insert(0, Transaction::new_coinbase(pkhash, reward));
+        self.update_digest();
+    }
+
     pub fn validate(&self) -> Result<(), BlockValidationError> {
         if self.hash() >= self.target {
             return Err(BlockValidationError::InvalidProofOfWork);
@@ -146,10 +151,14 @@ impl Block {
     }
 
     fn validate_transactions(&self) -> Result<(), TransactionError> {
-    for tx in &self.transactions {
-        tx.verify()?;
-    }
-    Ok(())
+        if self.transactions.is_empty() {
+            return Err(TransactionError::InvalidCoinbase);
+        }
+        self.transactions[0].verify_coinbase()?;
+        for tx in &self.transactions[1..] {
+            tx.verify()?;
+        }
+        Ok(())
 }
 }
 
@@ -182,7 +191,7 @@ mod tests {
     #[test]
     fn test_invalid_digest() {
         let mut block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
-        mine(&mut block);
+        mine(&mut block, [0; 32], 0);
         block.digest = String::new();
         assert_eq!(block.validate(), Err(BlockValidationError::HashDigestMismatch));
     }
@@ -205,7 +214,7 @@ mod tests {
         let mut block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
         let tx = Transaction::new(vec![], vec![]);
         block.add_tx(tx);
-        mine(&mut block);
+        mine(&mut block, [0; 32], 0);
         assert_eq!(block.validate(), Err(BlockValidationError::InvalidTransactions(TransactionError::EmptyInputs)));
     }
 }

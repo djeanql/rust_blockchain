@@ -20,7 +20,8 @@ pub enum TransactionError {
     DuplicateInput,
     DuplicateOutput,
     EmptyInputs,
-    EmptyOutputs
+    EmptyOutputs,
+    InvalidCoinbase
 }
 
 
