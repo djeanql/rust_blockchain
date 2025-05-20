@@ -37,6 +37,19 @@ impl UTXOSet {
             }
         }
     }
+
+    pub fn utxos_from_pkhash(&self, pkhash: [u8; 32]) -> Vec<([u8; 32], u16)> {
+        self.utxos
+            .iter()
+            .filter_map(|((txid, index), output)| {
+                if output.pkhash == pkhash {
+                    Some((*txid, *index))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
 }
 
 impl fmt::Display for UTXOSet {

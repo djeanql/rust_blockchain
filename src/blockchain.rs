@@ -1,12 +1,14 @@
+use sha2::{Digest, Sha256};
 use crate::block::Block;
+use crate::transaction::TxOutput;
 use std::fmt;
-use crate::errors::BlockValidationError;
+use crate::errors::{BlockValidationError, TransactionError};
 use crate::utxo::UTXOSet;
 
 pub struct Blockchain {
     chain: Vec<Block>,
     target: String,
-    utxos: UTXOSet,
+    pub utxos: UTXOSet,
 }
 
 //TODO: add difficulty adjustment
@@ -42,8 +44,44 @@ impl Blockchain {
         Ok(())
     }
 
+    fn validate_transactions_stateful(
+        &self,
+        block: &Block,
+    ) -> Result<(), TransactionError> {
+
+        //TODO: check coinbase reward
+
+        for tx in &block.transactions[1..] {
+            let mut inputs_total = 0 as i64;
+
+            for input in &tx.inputs {
+                if !self.utxo_exists(input.txid, input.output) {
+                    return Err(TransactionError::InvalidUTXO);
+                }
+
+                let utxo = self.utxos.get_utxo(input.txid, input.output).unwrap();
+
+                let input_pkhash: [u8; 32] = Sha256::digest(&input.pubkey).as_slice().try_into().unwrap();
+                if input_pkhash != utxo.pkhash {
+                    return Err(TransactionError::UnauthorizedSpend);
+                }
+
+
+                inputs_total += utxo.value as i64;
+            }
+
+            let total_fees = inputs_total - tx.outputs.iter().map(|o| o.value as i64).sum::<i64>();
+            if total_fees < 0 {
+                return Err(TransactionError::Overspend);
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn validate_block(&self, block: &Block) -> Result<(), BlockValidationError> {
         block.validate()?;
+        self.validate_transactions_stateful(block).map_err(|e| BlockValidationError::InvalidTransactions(e))?;
 
         if block.prev_hash != self.prev_hash() {
             return Err(BlockValidationError::InvalidPreviousHash);
@@ -71,6 +109,7 @@ impl Blockchain {
     pub fn utxo_exists(&self, txid: [u8; 32], index: u16) -> bool {
         self.utxos.get_utxo(txid, index).is_some()
     }
+
 }
 
 impl fmt::Display for Blockchain {

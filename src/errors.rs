@@ -21,7 +21,11 @@ pub enum TransactionError {
     DuplicateOutput,
     EmptyInputs,
     EmptyOutputs,
-    InvalidCoinbase
+    InvalidCoinbase,
+    // stateful validation errors
+    InvalidUTXO,
+    Overspend,
+    UnauthorizedSpend,
 }
 
 

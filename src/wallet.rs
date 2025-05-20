@@ -14,7 +14,7 @@ impl Wallet {
         let signing_key = SigningKey::random(&mut rand_core::OsRng);
         let verifying_key = signing_key.verifying_key().clone();
 
-        let encoded_point = verifying_key.to_encoded_point(false);
+        let encoded_point = verifying_key.to_encoded_point(true);
         let pubkey_bytes = encoded_point.as_bytes();
         let pubkey_hex = hex::encode(pubkey_bytes);
 
