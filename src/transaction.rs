@@ -55,6 +55,17 @@ impl TxInput {
     }
 }
 
+impl fmt::Display for TxInput {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "  TxID: {}, Output: {}, Signature: {}, Pubkey: {}",
+                hex::encode(self.txid),
+                self.output,
+                hex::encode(self.signature),
+                hex::encode(self.pubkey))?;
+        Ok(())
+    }
+}
+
 #[derive(Encode, Debug)]
 pub struct TxInputForSign<'a> {
     pub txid: &'a [u8; 32],
@@ -92,6 +103,15 @@ pub struct TxOutput {
 impl TxOutput {
     pub fn new(value: u64, pkhash: [u8; 32]) -> TxOutput {
         TxOutput { value, pkhash }
+    }
+}
+
+impl fmt::Display for TxOutput {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "  Value: {}, PKHash: {}",
+                self.value,
+                hex::encode(self.pkhash))?;
+        Ok(())
     }
 }
 
@@ -208,18 +228,13 @@ impl fmt::Display for Transaction {
         writeln!(f, "Timestamp: {}", self.timestamp)?;
         writeln!(f, "Inputs:")?;
         for input in &self.inputs {
-            writeln!(f, "  TxID: {}, Output: {}, Signature: {}, Pubkey: {}",
-                hex::encode(input.txid),
-                input.output,
-                hex::encode(input.signature),
-                hex::encode(input.pubkey))?;
+            write!(f, "  {}", input)?;
         }
         writeln!(f, "Outputs:")?;
         for output in &self.outputs {
-            writeln!(f, "  Value: {}, PKHash: {}",
-                output.value,
-                hex::encode(output.pkhash))?;
+            write!(f, "  {}", output)?;
         }
+        writeln!(f)?;
         Ok(())
     }
 }

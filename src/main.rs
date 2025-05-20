@@ -43,6 +43,8 @@ fn main() {
 
     blockchain.add_block(block).unwrap();
 
+    println!("\nUTXO SET:\n{}", blockchain.get_utxos());
+
     let mut block2 = blockchain.next_block();
     mine(&mut block2, wallet.pkhash, blockchain.get_block_reward());
     blockchain.add_block(block2).unwrap();

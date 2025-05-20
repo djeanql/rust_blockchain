@@ -63,6 +63,10 @@ impl Blockchain {
             None => String::from(""),
         }
     }
+
+    pub fn get_utxos(&self) -> &UTXOSet {
+        &self.utxos
+    }
 }
 
 impl fmt::Display for Blockchain {
