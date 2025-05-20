@@ -211,7 +211,7 @@ mod tests {
             String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
             Vec::new(),
         );
-        mine(&mut block, [0; 32], 0);
+        utils::mine(&mut block, [0; 32], 0);
         block.digest = String::new();
         assert_eq!(
             block.validate(),
