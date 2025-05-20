@@ -14,42 +14,42 @@ use errors::{BlockValidationError, TransactionError};
 fn main() {
     println!("Hello, world!");
 
-    let mut blockchain = Blockchain::new();
-    let mut block = blockchain.next_block();
-
     let wallet = Wallet::new();
+    let mut blockchain = Blockchain::new();
 
+    for i in 0..5 {
+        let mut block = blockchain.next_block();
+        println!("Mining block {}...", block.index);
+        mine(&mut block, wallet.pkhash, blockchain.get_block_reward());
+        blockchain.add_block(block).unwrap();
+    }
+
+    println!("\nUTXO SET:\n{}\n", blockchain.utxos);
+
+    let (txid, index) = &blockchain.utxos.utxos_from_pkhash(wallet.pkhash)[0];
+
+    let mut block = blockchain.next_block();
+    
     let inputs = vec![
-        TxInput::new_unsigned([0; 32], 2),
-        TxInput::new_unsigned([0; 32], 1),
+        TxInput::new_unsigned(*txid, *index), // use coinbase UTXO
     ];
 
     let outputs = vec![
-        TxOutput::new(100, [0; 32]),
-        TxOutput::new(200, [1; 32]),
+        TxOutput::new(100, [0; 32]), // unspendable
+        TxOutput::new(2000, wallet.pkhash), // send to self
+        TxOutput::new(42, [1; 32]),
     ];
 
     let mut tx = Transaction::new(inputs, outputs);
-
     wallet.sign_transaction(&mut tx);
 
-    println!("Transaction ID: {}", hex::encode(tx.id));
     block.add_tx(tx);
-
     mine(&mut block, wallet.pkhash, blockchain.get_block_reward());
-
-    println!("Block Digest: {:?}", block.digest);
-    println!("Block Timestamp: {:?}", block.timestamp);
-
     blockchain.add_block(block).unwrap();
 
-    println!("\nUTXO SET:\n{}", blockchain.utxos);
-
-    let mut block2 = blockchain.next_block();
-    mine(&mut block2, wallet.pkhash, blockchain.get_block_reward());
-    blockchain.add_block(block2).unwrap();
-
     println!("{}", blockchain);
+
+    println!("\nNEW UTXO SET:\n{}\n", blockchain.utxos);
 }
 
 //TODO: separate out the tests into separate modules
