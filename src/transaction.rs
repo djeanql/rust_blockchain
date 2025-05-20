@@ -383,4 +383,33 @@ mod tests {
         assert!(matches!(tx.verify(), Err(TransactionError::DuplicateOutput)));
     }
 
+    #[test]
+    fn test_fails_if_coinbase_has_inputs() {
+        let mut tx = Transaction::new(
+            vec![TxInput::new_unsigned([0;32], 0)],
+            vec![TxOutput::new(50, [0;32])]
+        );
+
+        let wallet = Wallet::new();
+        wallet.sign_transaction(&mut tx);
+
+        assert!(matches!(tx.verify_coinbase(), Err(TransactionError::InvalidCoinbase)));
+    }
+
+    #[test]
+    fn test_fails_if_coinbase_has_multiple_outputs() {
+        let mut tx = Transaction::new(
+            vec![],
+            vec![
+                TxOutput::new(50, [0;32]),
+                TxOutput::new(50, [0;32])
+            ]
+        );
+
+        let wallet = Wallet::new();
+        wallet.sign_transaction(&mut tx);
+
+        assert!(matches!(tx.verify_coinbase(), Err(TransactionError::InvalidCoinbase)));
+    }
+
 }

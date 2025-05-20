@@ -204,6 +204,35 @@ mod tests {
     }
 
     #[test]
+    fn test_missing_coinbase_tx() {
+        let wallet = Wallet::new();
+        let mut blockchain = Blockchain::new();
+        let mut block = blockchain.next_block();
+
+        let inputs = vec![
+            TxInput::new_unsigned([0; 32], 2),
+            TxInput::new_unsigned([0; 32], 1),
+        ];
+
+        let outputs = vec![
+            TxOutput::new(100, [0; 32]),
+            TxOutput::new(200, [1; 32]),
+        ];
+
+        let mut tx = Transaction::new(inputs, outputs);
+        wallet.sign_transaction(&mut tx);
+
+        block.add_tx(tx);
+        
+        while block.hash() > block.target {
+            block.nonce += 1;
+        }
+        block.update_digest();
+
+        assert_eq!(blockchain.add_block(block), Err(BlockValidationError::InvalidTransactions(TransactionError::InvalidCoinbase)));
+    }
+
+    #[test]
     fn test_deserialise_block() {
         let blockchain = Blockchain::new();
         let block = blockchain.next_block();
