@@ -55,7 +55,7 @@ impl Blockchain {
             let mut inputs_total = 0 as i64;
 
             for input in &tx.inputs {
-                if !self.utxo_exists(input.txid, input.output) {
+                if self.utxos.get_utxo(input.txid, input.output).is_none() {
                     return Err(TransactionError::InvalidUTXO);
                 }
 
@@ -101,15 +101,6 @@ impl Blockchain {
             None => String::from(""),
         }
     }
-
-    pub fn get_utxos(&self) -> &UTXOSet {
-        &self.utxos
-    }
-
-    pub fn utxo_exists(&self, txid: [u8; 32], index: u16) -> bool {
-        self.utxos.get_utxo(txid, index).is_some()
-    }
-
 }
 
 impl fmt::Display for Blockchain {

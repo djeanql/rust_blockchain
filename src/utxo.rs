@@ -27,6 +27,10 @@ impl UTXOSet {
         self.utxos.get(&(txid, index))
     }
 
+    pub fn get_utxos(&self) -> &HashMap<([u8; 32], u16), TxOutput> {
+        &self.utxos
+    }
+
     pub fn update_with_block(&mut self, block: &Block) {
         for tx in &block.transactions {
             for input in &tx.inputs {

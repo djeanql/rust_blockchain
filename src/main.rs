@@ -43,7 +43,7 @@ fn main() {
 
     blockchain.add_block(block).unwrap();
 
-    println!("\nUTXO SET:\n{}", blockchain.get_utxos());
+    println!("\nUTXO SET:\n{}", blockchain.utxos);
 
     let mut block2 = blockchain.next_block();
     mine(&mut block2, wallet.pkhash, blockchain.get_block_reward());
@@ -85,12 +85,12 @@ mod tests {
 
         wallet.sign_transaction(&mut tx);
         let txid = tx.id;
-        
+
         block2.add_tx(tx);
         mine(&mut block2, wallet.pkhash, blockchain.get_block_reward());
 
         assert_eq!(blockchain.add_block(block2), Ok(()));
-        assert!(blockchain.utxo_exists(txid, 0) && blockchain.utxo_exists(txid, 1));
+        assert!(blockchain.utxos.get_utxo(txid, 0).is_some() && blockchain.utxos.get_utxo(txid, 1).is_some());
     }
 
     #[test]
