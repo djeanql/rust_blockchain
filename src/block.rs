@@ -1,10 +1,10 @@
+use crate::errors::{BlockValidationError, TransactionError};
 use crate::transaction::Transaction;
 use crate::utils;
 use bincode::{Decode, Encode};
 use sha2::{Digest, Sha256};
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::errors::{BlockValidationError, TransactionError};
 
 #[derive(Encode)]
 struct BlockNoDigest<'a> {
@@ -40,14 +40,13 @@ impl Block {
             timestamp: utils::unix_timestamp(),
             prev_hash,
             target,
-            transactions: transactions,
+            transactions,
             nonce: 0,
         };
         block.update_digest();
         block
     }
 
-    
     #[allow(dead_code)]
     pub fn from_bincode(data: &[u8]) -> Block {
         bincode::decode_from_slice(data, bincode::config::standard())
@@ -120,7 +119,8 @@ impl Block {
     }
 
     pub fn add_coinbase_tx(&mut self, pkhash: [u8; 32], reward: u64) {
-        self.transactions.insert(0, Transaction::new_coinbase(pkhash, reward, self.index));
+        self.transactions
+            .insert(0, Transaction::new_coinbase(pkhash, reward, self.index));
         self.update_digest();
     }
 
@@ -142,10 +142,13 @@ impl Block {
 
         let result = self.validate_transactions();
         if result.is_err() {
-            return Err(BlockValidationError::InvalidTransactions(result.err().unwrap()));
+            return Err(BlockValidationError::InvalidTransactions(
+                result.err().unwrap(),
+            ));
         }
 
-        self.validate_transactions().map_err(|e| BlockValidationError::InvalidTransactions(e))?;
+        self.validate_transactions()
+            .map_err(BlockValidationError::InvalidTransactions)?;
 
         Ok(())
     }
@@ -159,7 +162,7 @@ impl Block {
             tx.verify()?;
         }
         Ok(())
-}
+    }
 }
 
 impl fmt::Display for Block {
@@ -171,55 +174,92 @@ impl fmt::Display for Block {
         writeln!(f, "  Hash: {}", self.digest)?;
         writeln!(f, "  Transactions:")?;
         for tx in &self.transactions {
-            let indented = tx.to_string()
-    .lines()
-    .map(|line| format!("    {}", line))
-    .collect::<Vec<_>>()
-    .join("\n");
-println!("{}", indented);
+            let indented = tx
+                .to_string()
+                .lines()
+                .map(|line| format!("    {}", line))
+                .collect::<Vec<_>>()
+                .join("\n");
+            writeln!(f, "{}", indented)?;
         }
         Ok(())
     }
 }
 
 mod tests {
-    use crate::utils::mine;
-
     use super::*;
 
     #[test]
     fn test_invalid_pow() {
-        let block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
-        assert_eq!(block.validate(), Err(BlockValidationError::InvalidProofOfWork));
+        let block = Block::new(
+            0,
+            String::new(),
+            String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            Vec::new(),
+        );
+        assert_eq!(
+            block.validate(),
+            Err(BlockValidationError::InvalidProofOfWork)
+        );
     }
 
     #[test]
     fn test_invalid_digest() {
-        let mut block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
+        let mut block = Block::new(
+            0,
+            String::new(),
+            String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            Vec::new(),
+        );
         mine(&mut block, [0; 32], 0);
         block.digest = String::new();
-        assert_eq!(block.validate(), Err(BlockValidationError::HashDigestMismatch));
+        assert_eq!(
+            block.validate(),
+            Err(BlockValidationError::HashDigestMismatch)
+        );
     }
 
     #[test]
     fn test_invalid_timestamp() {
-        let mut block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
-        block.timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + 1000;
+        let mut block = Block::new(
+            0,
+            String::new(),
+            String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            Vec::new(),
+        );
+        block.timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            + 1000;
 
         while !utils::hash_less_than_target(&block.digest, &block.target) {
             block.nonce += 1;
             block.update_digest();
         }
 
-        assert_eq!(block.validate(), Err(BlockValidationError::TimestampInFuture));
+        assert_eq!(
+            block.validate(),
+            Err(BlockValidationError::TimestampInFuture)
+        );
     }
 
     #[test]
     fn test_invalid_transactions() {
-        let mut block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
+        let mut block = Block::new(
+            0,
+            String::new(),
+            String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            Vec::new(),
+        );
         let tx = Transaction::new(vec![], vec![]);
         block.add_tx(tx);
-        mine(&mut block, [0; 32], 0);
-        assert_eq!(block.validate(), Err(BlockValidationError::InvalidTransactions(TransactionError::EmptyInputs)));
+        utils::mine(&mut block, [0; 32], 0);
+        assert_eq!(
+            block.validate(),
+            Err(BlockValidationError::InvalidTransactions(
+                TransactionError::EmptyInputs
+            ))
+        );
     }
 }

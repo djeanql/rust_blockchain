@@ -1,5 +1,4 @@
 use crate::block::Block;
-use hex;
 use num_bigint::BigUint;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -15,7 +14,6 @@ pub fn mine(block: &mut Block, miner_pkhash: [u8; 32], block_reward: u64) {
         block.update_nonce_and_timestamp();
     }
 }
-    
 
 pub fn unix_timestamp() -> u64 {
     SystemTime::now()

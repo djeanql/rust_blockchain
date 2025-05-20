@@ -1,13 +1,12 @@
+use crate::errors::TransactionError;
 use crate::utils;
 use bincode::{Decode, Encode};
 use k256::ecdsa::signature::Verifier;
 use k256::ecdsa::{Signature, SigningKey, signature::Signer};
 use sha2::{Digest, Sha256};
 use std::{fmt, vec};
-use crate::errors::TransactionError;
 
 //TODO: use ed25519
-//TODO: use references instead of copying
 
 #[derive(Encode, Decode, Clone)]
 pub struct TxInput {
@@ -19,10 +18,15 @@ pub struct TxInput {
 
 impl TxInput {
     pub fn sign(&mut self, signing_key: &SigningKey) {
-        self.pubkey = signing_key.verifying_key().to_encoded_point(true).as_bytes().try_into().unwrap();
+        self.pubkey = signing_key
+            .verifying_key()
+            .to_encoded_point(true)
+            .as_bytes()
+            .try_into()
+            .unwrap();
 
         let tx_for_sign: TxInputForSign = (&*self).into();
-        
+
         let signature: Signature = signing_key.sign(&tx_for_sign.sighash());
         self.signature = signature.to_bytes().into();
     }
@@ -30,11 +34,11 @@ impl TxInput {
     pub fn verify_signature(&self) -> Result<(), TransactionError> {
         let tx_for_sign: TxInputForSign = self.into();
 
-        let verify_key =
-            k256::ecdsa::VerifyingKey::from_sec1_bytes(&self.pubkey).map_err(|_| TransactionError::InvalidPublicKey)?;
+        let verify_key = k256::ecdsa::VerifyingKey::from_sec1_bytes(&self.pubkey)
+            .map_err(|_| TransactionError::InvalidPublicKey)?;
 
-        let signature =
-            k256::ecdsa::Signature::from_bytes((&self.signature).into()).map_err(|_| TransactionError::InvalidSignature)?;
+        let signature = k256::ecdsa::Signature::from_bytes((&self.signature).into())
+            .map_err(|_| TransactionError::InvalidSignature)?;
 
         verify_key
             .verify(&tx_for_sign.sighash(), &signature)
@@ -57,11 +61,14 @@ impl TxInput {
 
 impl fmt::Display for TxInput {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "  TxID: {}, Output: {}, Signature: {}, Pubkey: {}",
-                hex::encode(self.txid),
-                self.output,
-                hex::encode(self.signature),
-                hex::encode(self.pubkey))?;
+        writeln!(
+            f,
+            "  TxID: {}, Output: {}, Signature: {}, Pubkey: {}",
+            hex::encode(self.txid),
+            self.output,
+            hex::encode(self.signature),
+            hex::encode(self.pubkey)
+        )?;
         Ok(())
     }
 }
@@ -108,9 +115,12 @@ impl TxOutput {
 
 impl fmt::Display for TxOutput {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "  Value: {}, PKHash: {}",
-                self.value,
-                hex::encode(self.pkhash))?;
+        writeln!(
+            f,
+            "  Value: {}, PKHash: {}",
+            self.value,
+            hex::encode(self.pkhash)
+        )?;
         Ok(())
     }
 }
@@ -191,7 +201,6 @@ impl Transaction {
     }
 
     pub fn verify(&self) -> Result<(), TransactionError> {
-
         if self.inputs.is_empty() {
             return Err(TransactionError::EmptyInputs);
         } else if self.outputs.is_empty() {
@@ -199,9 +208,15 @@ impl Transaction {
         }
 
         self.verify_signatures()?;
-        
+
         for input in &self.inputs {
-            if self.inputs.iter().filter(|i| i.txid == input.txid && i.output == input.output).count() > 1 {
+            if self
+                .inputs
+                .iter()
+                .filter(|i| i.txid == input.txid && i.output == input.output)
+                .count()
+                > 1
+            {
                 return Err(TransactionError::DuplicateInput);
             }
         }
@@ -210,7 +225,13 @@ impl Transaction {
             if output.value == 0 {
                 return Err(TransactionError::ZeroValueOutput);
             }
-            if self.outputs.iter().filter(|o| o.pkhash == output.pkhash).count() > 1 {
+            if self
+                .outputs
+                .iter()
+                .filter(|o| o.pkhash == output.pkhash)
+                .count()
+                > 1
+            {
                 return Err(TransactionError::DuplicateOutput);
             }
         }
@@ -224,7 +245,12 @@ impl Transaction {
         Ok(())
     }
     pub fn verify_coinbase(&self) -> Result<(), TransactionError> {
-        if self.inputs.len() != 1 || self.outputs.len() != 1 || self.inputs[0].signature != [0; 64] || self.inputs[0].pubkey != [0; 33] || self.inputs[0].output != 0 {
+        if self.inputs.len() != 1
+            || self.outputs.len() != 1
+            || self.inputs[0].signature != [0; 64]
+            || self.inputs[0].pubkey != [0; 33]
+            || self.inputs[0].output != 0
+        {
             return Err(TransactionError::InvalidCoinbase);
         }
 
@@ -263,10 +289,7 @@ mod tests {
             TxInput::new_unsigned([0; 32], 1),
         ];
 
-        let outputs = vec![
-            TxOutput::new(100, [0; 32]),
-            TxOutput::new(200, [1; 32]),
-        ];
+        let outputs = vec![TxOutput::new(100, [0; 32]), TxOutput::new(200, [1; 32])];
 
         let mut transaction = Transaction::new(inputs, outputs);
 
@@ -289,10 +312,7 @@ mod tests {
             TxInput::new_unsigned([0; 32], 1),
         ];
 
-        let outputs = vec![
-            TxOutput::new(100, [0; 32]),
-            TxOutput::new(200, [0; 32]),
-        ];
+        let outputs = vec![TxOutput::new(100, [0; 32]), TxOutput::new(200, [0; 32])];
 
         let mut transaction = Transaction::new(inputs, outputs);
 
@@ -300,14 +320,17 @@ mod tests {
 
         transaction.inputs[0].signature[0] = 1;
 
-        assert!(matches!(transaction.verify(), Err(TransactionError::SignatureVerificationFailed)));
+        assert!(matches!(
+            transaction.verify(),
+            Err(TransactionError::SignatureVerificationFailed)
+        ));
     }
 
     #[test]
     fn test_fails_if_signature_tampered() {
         let mut tx = Transaction::new(
-            vec![TxInput::new_unsigned([0;32], 0)],
-            vec![TxOutput::new(50, [0;32])]
+            vec![TxInput::new_unsigned([0; 32], 0)],
+            vec![TxOutput::new(50, [0; 32])],
         );
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
@@ -315,14 +338,17 @@ mod tests {
 
         // tamper
         tx.inputs[0].signature[0] ^= 0xFF;
-        assert!(matches!(tx.verify(), Err(TransactionError::SignatureVerificationFailed)));
+        assert!(matches!(
+            tx.verify(),
+            Err(TransactionError::SignatureVerificationFailed)
+        ));
     }
 
     #[test]
     fn test_fails_if_pubkey_tampered() {
         let mut tx = Transaction::new(
-            vec![TxInput::new_unsigned([0;32], 0)],
-            vec![TxOutput::new(50, [0;32])]
+            vec![TxInput::new_unsigned([0; 32], 0)],
+            vec![TxOutput::new(50, [0; 32])],
         );
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
@@ -331,15 +357,17 @@ mod tests {
         // tamper
         tx.inputs[0].pubkey[1] ^= 0xAA;
         let result = tx.verify();
-        assert!(matches!(result, Err(TransactionError::SignatureVerificationFailed)) ||
-                matches!(result, Err(TransactionError::InvalidPublicKey)));
+        assert!(
+            matches!(result, Err(TransactionError::SignatureVerificationFailed))
+                || matches!(result, Err(TransactionError::InvalidPublicKey))
+        );
     }
 
     #[test]
     fn test_fails_if_invalid_id() {
         let mut tx = Transaction::new(
-            vec![TxInput::new_unsigned([0;32], 0)],
-            vec![TxOutput::new(50, [0;32])]
+            vec![TxInput::new_unsigned([0; 32], 0)],
+            vec![TxOutput::new(50, [0; 32])],
         );
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
@@ -352,38 +380,44 @@ mod tests {
     #[test]
     fn test_fails_if_invalid_timestamp() {
         let mut tx = Transaction::new(
-            vec![TxInput::new_unsigned([0;32], 0)],
-            vec![TxOutput::new(50, [0;32])]
+            vec![TxInput::new_unsigned([0; 32], 0)],
+            vec![TxOutput::new(50, [0; 32])],
         );
         tx.timestamp += 100;
 
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
 
-        assert!(matches!(tx.verify(), Err(TransactionError::InvalidTimestamp)));
+        assert!(matches!(
+            tx.verify(),
+            Err(TransactionError::InvalidTimestamp)
+        ));
     }
 
     #[test]
     fn test_fails_if_zero_value_output() {
         let mut tx = Transaction::new(
-            vec![TxInput::new_unsigned([0;32], 0)],
-            vec![TxOutput::new(0, [0;32])]
+            vec![TxInput::new_unsigned([0; 32], 0)],
+            vec![TxOutput::new(0, [0; 32])],
         );
 
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
 
-        assert!(matches!(tx.verify(), Err(TransactionError::ZeroValueOutput)));
+        assert!(matches!(
+            tx.verify(),
+            Err(TransactionError::ZeroValueOutput)
+        ));
     }
 
     #[test]
     fn test_fails_if_duplicate_input() {
         let mut tx = Transaction::new(
             vec![
-                TxInput::new_unsigned([0;32], 0),
-                TxInput::new_unsigned([0;32], 0)
+                TxInput::new_unsigned([0; 32], 0),
+                TxInput::new_unsigned([0; 32], 0),
             ],
-            vec![TxOutput::new(50, [0;32])]
+            vec![TxOutput::new(50, [0; 32])],
         );
 
         let wallet = Wallet::new();
@@ -395,46 +429,48 @@ mod tests {
     #[test]
     fn test_fails_if_duplicate_output() {
         let mut tx = Transaction::new(
-            vec![TxInput::new_unsigned([0;32], 0)],
-            vec![
-                TxOutput::new(50, [0;32]),
-                TxOutput::new(50, [0;32])
-            ]
+            vec![TxInput::new_unsigned([0; 32], 0)],
+            vec![TxOutput::new(50, [0; 32]), TxOutput::new(50, [0; 32])],
         );
 
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
 
-        assert!(matches!(tx.verify(), Err(TransactionError::DuplicateOutput)));
+        assert!(matches!(
+            tx.verify(),
+            Err(TransactionError::DuplicateOutput)
+        ));
     }
 
     #[test]
     fn test_fails_if_coinbase_has_inputs() {
         let mut tx = Transaction::new(
-            vec![TxInput::new_unsigned([0;32], 0)],
-            vec![TxOutput::new(50, [0;32])]
+            vec![TxInput::new_unsigned([0; 32], 0)],
+            vec![TxOutput::new(50, [0; 32])],
         );
 
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
 
-        assert!(matches!(tx.verify_coinbase(), Err(TransactionError::InvalidCoinbase)));
+        assert!(matches!(
+            tx.verify_coinbase(),
+            Err(TransactionError::InvalidCoinbase)
+        ));
     }
 
     #[test]
     fn test_fails_if_coinbase_has_multiple_outputs() {
         let mut tx = Transaction::new(
             vec![],
-            vec![
-                TxOutput::new(50, [0;32]),
-                TxOutput::new(50, [0;32])
-            ]
+            vec![TxOutput::new(50, [0; 32]), TxOutput::new(50, [0; 32])],
         );
 
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
 
-        assert!(matches!(tx.verify_coinbase(), Err(TransactionError::InvalidCoinbase)));
+        assert!(matches!(
+            tx.verify_coinbase(),
+            Err(TransactionError::InvalidCoinbase)
+        ));
     }
-
 }

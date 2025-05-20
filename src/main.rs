@@ -1,15 +1,14 @@
 mod block;
 mod blockchain;
+mod errors;
 mod transaction;
 mod utils;
-mod wallet;
-mod errors;
 mod utxo;
-use blockchain::{Blockchain};
+mod wallet;
+use blockchain::Blockchain;
 use transaction::{Transaction, TxInput, TxOutput};
 use utils::*;
 use wallet::Wallet;
-use errors::{BlockValidationError, TransactionError};
 
 fn main() {
     println!("Hello, world!");
@@ -17,7 +16,7 @@ fn main() {
     let wallet = Wallet::new();
     let mut blockchain = Blockchain::new();
 
-    for i in 0..5 {
+    for _ in 0..5 {
         let mut block = blockchain.next_block();
         println!("Mining block {}...", block.index);
         mine(&mut block, wallet.pkhash, blockchain.get_block_reward());
@@ -29,13 +28,13 @@ fn main() {
     let (txid, index) = &blockchain.utxos.utxos_from_pkhash(wallet.pkhash)[0];
 
     let mut block = blockchain.next_block();
-    
+
     let inputs = vec![
         TxInput::new_unsigned(*txid, *index), // use coinbase UTXO
     ];
 
     let outputs = vec![
-        TxOutput::new(100, [0; 32]), // unspendable
+        TxOutput::new(100, [0; 32]),        // unspendable
         TxOutput::new(2000, wallet.pkhash), // send to self
         TxOutput::new(42, [1; 32]),
     ];
@@ -53,10 +52,13 @@ fn main() {
 }
 
 //TODO: separate out the tests into separate modules
+//TODO: Check all stateful validation errors and double spending
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use block::Block;
+    use errors::{BlockValidationError, TransactionError};
 
     #[test]
     fn test_spend_utxo() {
@@ -71,13 +73,11 @@ mod tests {
         let (txid, index) = &blockchain.utxos.utxos_from_pkhash(wallet.pkhash)[0];
 
         let mut block2 = blockchain.next_block();
-        
-        let inputs = vec![
-            TxInput::new_unsigned(*txid, *index),
-        ];
+
+        let inputs = vec![TxInput::new_unsigned(*txid, *index)];
 
         let outputs = vec![
-            TxOutput::new(100, [0; 32]), // unspendable
+            TxOutput::new(100, [0; 32]),       // unspendable
             TxOutput::new(200, wallet.pkhash), // send to self
         ];
 
@@ -90,7 +90,10 @@ mod tests {
         mine(&mut block2, wallet.pkhash, blockchain.get_block_reward());
 
         assert_eq!(blockchain.add_block(block2), Ok(()));
-        assert!(blockchain.utxos.get_utxo(txid, 0).is_some() && blockchain.utxos.get_utxo(txid, 1).is_some());
+        assert!(
+            blockchain.utxos.get_utxo(txid, 0).is_some()
+                && blockchain.utxos.get_utxo(txid, 1).is_some()
+        );
     }
 
     #[test]
@@ -108,7 +111,10 @@ mod tests {
         let mut block = blockchain.next_block();
         block.index = 2;
         mine(&mut block, [0; 32], blockchain.get_block_reward());
-        assert_eq!(blockchain.add_block(block), Err(BlockValidationError::InvalidIndex));
+        assert_eq!(
+            blockchain.add_block(block),
+            Err(BlockValidationError::InvalidIndex)
+        );
     }
 
     #[test]
@@ -127,7 +133,10 @@ mod tests {
         }
         block2.update_digest();
 
-        assert_eq!(blockchain.add_block(block2), Err(BlockValidationError::InvalidTimestamp))
+        assert_eq!(
+            blockchain.add_block(block2),
+            Err(BlockValidationError::InvalidTimestamp)
+        )
     }
 
     #[test]
@@ -136,7 +145,10 @@ mod tests {
         let mut block = blockchain.next_block();
         block.prev_hash = String::from("invalid_hash");
         mine(&mut block, [0; 32], blockchain.get_block_reward());
-        assert_eq!(blockchain.add_block(block), Err(BlockValidationError::InvalidPreviousHash))
+        assert_eq!(
+            blockchain.add_block(block),
+            Err(BlockValidationError::InvalidPreviousHash)
+        )
     }
 
     #[test]
@@ -156,10 +168,7 @@ mod tests {
             TxInput::new_unsigned([0; 32], 1),
         ];
 
-        let outputs = vec![
-            TxOutput::new(100, [0; 32]),
-            TxOutput::new(200, [1; 32]),
-        ];
+        let outputs = vec![TxOutput::new(100, [0; 32]), TxOutput::new(200, [1; 32])];
 
         let tx = Transaction::new(inputs, outputs);
 
@@ -177,10 +186,7 @@ mod tests {
             TxInput::new_unsigned([0; 32], 1),
         ];
 
-        let outputs = vec![
-            TxOutput::new(100, [0; 32]),
-            TxOutput::new(200, [1; 32]),
-        ];
+        let outputs = vec![TxOutput::new(100, [0; 32]), TxOutput::new(200, [1; 32])];
 
         let mut tx = Transaction::new(inputs, outputs);
 
@@ -200,10 +206,7 @@ mod tests {
             TxInput::new_unsigned([0; 32], 1),
         ];
 
-        let outputs = vec![
-            TxOutput::new(100, [0; 32]),
-            TxOutput::new(200, [1; 32]),
-        ];
+        let outputs = vec![TxOutput::new(100, [0; 32]), TxOutput::new(200, [1; 32])];
 
         let tx = Transaction::new(inputs, outputs);
 
@@ -211,9 +214,17 @@ mod tests {
         mine(&mut block, [0; 32], blockchain.get_block_reward());
 
         let result = blockchain.add_block(block);
-        
-        assert!(result == Err(BlockValidationError::InvalidTransactions(TransactionError::InvalidSignature)) ||
-            result == Err(BlockValidationError::InvalidTransactions(TransactionError::InvalidPublicKey)));
+
+        assert!(
+            result
+                == Err(BlockValidationError::InvalidTransactions(
+                    TransactionError::InvalidSignature
+                ))
+                || result
+                    == Err(BlockValidationError::InvalidTransactions(
+                        TransactionError::InvalidPublicKey
+                    ))
+        );
     }
 
     #[test]
@@ -227,22 +238,24 @@ mod tests {
             TxInput::new_unsigned([0; 32], 1),
         ];
 
-        let outputs = vec![
-            TxOutput::new(100, [0; 32]),
-            TxOutput::new(200, [1; 32]),
-        ];
+        let outputs = vec![TxOutput::new(100, [0; 32]), TxOutput::new(200, [1; 32])];
 
         let mut tx = Transaction::new(inputs, outputs);
         wallet.sign_transaction(&mut tx);
 
         block.add_tx(tx);
-        
+
         while block.hash() > block.target {
             block.nonce += 1;
         }
         block.update_digest();
 
-        assert_eq!(blockchain.add_block(block), Err(BlockValidationError::InvalidTransactions(TransactionError::InvalidCoinbase)));
+        assert_eq!(
+            blockchain.add_block(block),
+            Err(BlockValidationError::InvalidTransactions(
+                TransactionError::InvalidCoinbase
+            ))
+        );
     }
 
     #[test]

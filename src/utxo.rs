@@ -1,8 +1,7 @@
+use crate::block::Block;
 use crate::transaction::TxOutput;
 use std::collections::HashMap;
-use crate::block::Block;
 use std::fmt;
-
 
 pub struct UTXOSet {
     utxos: HashMap<([u8; 32], u16), TxOutput>,
@@ -25,10 +24,6 @@ impl UTXOSet {
 
     pub fn get_utxo(&self, txid: [u8; 32], index: u16) -> Option<&TxOutput> {
         self.utxos.get(&(txid, index))
-    }
-
-    pub fn get_utxos(&self) -> &HashMap<([u8; 32], u16), TxOutput> {
-        &self.utxos
     }
 
     pub fn update_with_block(&mut self, block: &Block) {
@@ -59,7 +54,13 @@ impl UTXOSet {
 impl fmt::Display for UTXOSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for ((txid, index), output) in &self.utxos {
-            write!(f, "TxID: {}, Index: {}, Output: {}", hex::encode(txid), index, output)?;
+            write!(
+                f,
+                "TxID: {}, Index: {}, Output: {}",
+                hex::encode(txid),
+                index,
+                output
+            )?;
         }
         Ok(())
     }

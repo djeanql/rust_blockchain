@@ -12,7 +12,7 @@ pub struct Wallet {
 impl Wallet {
     pub fn new() -> Wallet {
         let signing_key = SigningKey::random(&mut rand_core::OsRng);
-        let verifying_key = signing_key.verifying_key().clone();
+        let verifying_key = *signing_key.verifying_key();
 
         let encoded_point = verifying_key.to_encoded_point(true);
         let pubkey_bytes = encoded_point.as_bytes();
@@ -21,7 +21,7 @@ impl Wallet {
         Wallet {
             signing_key,
             verifying_key,
-            pkhash: Sha256::digest(&pubkey_bytes).into(),
+            pkhash: Sha256::digest(pubkey_bytes).into(),
             address: pubkey_hex,
         }
     }

@@ -27,5 +27,3 @@ pub enum TransactionError {
     Overspend,
     UnauthorizedSpend,
 }
-
-

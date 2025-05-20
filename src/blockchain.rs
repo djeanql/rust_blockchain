@@ -1,9 +1,8 @@
-use sha2::{Digest, Sha256};
 use crate::block::Block;
-use crate::transaction::TxOutput;
-use std::fmt;
 use crate::errors::{BlockValidationError, TransactionError};
 use crate::utxo::UTXOSet;
+use sha2::{Digest, Sha256};
+use std::fmt;
 
 pub struct Blockchain {
     chain: Vec<Block>,
@@ -44,15 +43,12 @@ impl Blockchain {
         Ok(())
     }
 
-    fn validate_transactions_stateful(
-        &self,
-        block: &Block,
-    ) -> Result<(), TransactionError> {
-
+    fn validate_transactions_stateful(&self, block: &Block) -> Result<(), TransactionError> {
         //TODO: check coinbase reward
+        //TODO: check for double spend
 
         for tx in &block.transactions[1..] {
-            let mut inputs_total = 0 as i64;
+            let mut inputs_total = 0;
 
             for input in &tx.inputs {
                 if self.utxos.get_utxo(input.txid, input.output).is_none() {
@@ -61,11 +57,11 @@ impl Blockchain {
 
                 let utxo = self.utxos.get_utxo(input.txid, input.output).unwrap();
 
-                let input_pkhash: [u8; 32] = Sha256::digest(&input.pubkey).as_slice().try_into().unwrap();
+                let input_pkhash: [u8; 32] =
+                    Sha256::digest(input.pubkey).as_slice().try_into().unwrap();
                 if input_pkhash != utxo.pkhash {
                     return Err(TransactionError::UnauthorizedSpend);
                 }
-
 
                 inputs_total += utxo.value as i64;
             }
@@ -81,7 +77,8 @@ impl Blockchain {
 
     pub fn validate_block(&self, block: &Block) -> Result<(), BlockValidationError> {
         block.validate()?;
-        self.validate_transactions_stateful(block).map_err(|e| BlockValidationError::InvalidTransactions(e))?;
+        self.validate_transactions_stateful(block)
+            .map_err(BlockValidationError::InvalidTransactions)?;
 
         if block.prev_hash != self.prev_hash() {
             return Err(BlockValidationError::InvalidPreviousHash);
