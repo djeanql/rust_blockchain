@@ -106,8 +106,8 @@ struct TransactionNoID<'a> {
 pub struct Transaction {
     pub id: [u8; 32],
     pub timestamp: u64,
-    inputs: Vec<TxInput>,
-    outputs: Vec<TxOutput>,
+    pub inputs: Vec<TxInput>,
+    pub outputs: Vec<TxOutput>,
 }
 
 impl Transaction {

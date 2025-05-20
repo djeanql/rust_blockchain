@@ -4,6 +4,7 @@ mod transaction;
 mod utils;
 mod wallet;
 mod errors;
+mod utxo;
 use blockchain::{Blockchain};
 use transaction::{Transaction, TxInput, TxOutput};
 use utils::*;

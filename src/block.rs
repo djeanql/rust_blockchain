@@ -171,7 +171,12 @@ impl fmt::Display for Block {
         writeln!(f, "  Hash: {}", self.digest)?;
         writeln!(f, "  Transactions:")?;
         for tx in &self.transactions {
-            writeln!(f, "    {}", tx)?;
+            let indented = tx.to_string()
+    .lines()
+    .map(|line| format!("    {}", line))
+    .collect::<Vec<_>>()
+    .join("\n");
+println!("{}", indented);
         }
         Ok(())
     }

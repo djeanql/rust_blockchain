@@ -1,14 +1,15 @@
 use crate::block::Block;
 use std::fmt;
 use crate::errors::BlockValidationError;
+use crate::utxo::UTXOSet;
 
 pub struct Blockchain {
     chain: Vec<Block>,
     target: String,
+    utxos: UTXOSet,
 }
 
 //TODO: add difficulty adjustment
-//TODO: coinbase transactions
 
 impl Blockchain {
     pub fn new() -> Blockchain {
@@ -17,6 +18,7 @@ impl Blockchain {
             target: String::from(
                 "000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
             ),
+            utxos: UTXOSet::new(),
         }
     }
 
@@ -35,6 +37,7 @@ impl Blockchain {
 
     pub fn add_block(&mut self, block: Block) -> Result<(), BlockValidationError> {
         self.validate_block(&block)?;
+        self.utxos.update_with_block(&block);
         self.chain.push(block);
         Ok(())
     }
