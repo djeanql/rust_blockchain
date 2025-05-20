@@ -3,7 +3,7 @@ use bincode::{Decode, Encode};
 use k256::ecdsa::signature::Verifier;
 use k256::ecdsa::{Signature, SigningKey, signature::Signer};
 use sha2::{Digest, Sha256};
-use std::fmt;
+use std::{fmt, vec};
 use crate::errors::TransactionError;
 
 //TODO: use ed25519
@@ -140,11 +140,21 @@ impl Transaction {
         }
     }
 
-    pub fn new_coinbase(miner_pkhash: [u8; 32], reward: u64) -> Transaction {
+    pub fn new_coinbase(miner_pkhash: [u8; 32], reward: u64, block_height: u64) -> Transaction {
+        let mut txid = [0u8; 32];
+
+        // Encode the block height as big-endian into the first 8 bytes of txid
+        txid[0..8].copy_from_slice(&block_height.to_be_bytes());
+
         let mut tx = Transaction {
             id: [0; 32],
             timestamp: utils::unix_timestamp(),
-            inputs: Vec::new(),
+            inputs: vec![TxInput {
+                txid,
+                output: 0,
+                signature: [0; 64],
+                pubkey: [0; 33],
+            }],
             outputs: vec![TxOutput::new(reward, miner_pkhash)],
         };
         tx.id = tx.hash();
@@ -214,7 +224,7 @@ impl Transaction {
         Ok(())
     }
     pub fn verify_coinbase(&self) -> Result<(), TransactionError> {
-        if self.inputs.len() != 0 || self.outputs.len() != 1 || self.id != self.hash() {
+        if self.inputs.len() != 1 || self.outputs.len() != 1 || self.inputs[0].signature != [0; 64] || self.inputs[0].pubkey != [0; 33] || self.inputs[0].output != 0 {
             return Err(TransactionError::InvalidCoinbase);
         }
 

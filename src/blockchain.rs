@@ -30,7 +30,7 @@ impl Blockchain {
 
     pub fn next_block(&self) -> Block {
         Block::new(
-            self.chain.len() as u32,
+            self.chain.len() as u64,
             self.prev_hash(),
             self.target.clone(),
             Vec::new(),

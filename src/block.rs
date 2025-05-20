@@ -8,7 +8,7 @@ use crate::errors::{BlockValidationError, TransactionError};
 
 #[derive(Encode)]
 struct BlockNoDigest<'a> {
-    index: u32,
+    index: u64,
     timestamp: u64,
     prev_hash: &'a String,
     target: &'a String,
@@ -19,7 +19,7 @@ struct BlockNoDigest<'a> {
 #[derive(Encode, Decode)]
 pub struct Block {
     pub digest: String,
-    pub index: u32,
+    pub index: u64,
     pub timestamp: u64,
     pub prev_hash: String,
     pub target: String,
@@ -29,7 +29,7 @@ pub struct Block {
 
 impl Block {
     pub fn new(
-        index: u32,
+        index: u64,
         prev_hash: String,
         target: String,
         transactions: Vec<Transaction>,
@@ -120,7 +120,7 @@ impl Block {
     }
 
     pub fn add_coinbase_tx(&mut self, pkhash: [u8; 32], reward: u64) {
-        self.transactions.insert(0, Transaction::new_coinbase(pkhash, reward));
+        self.transactions.insert(0, Transaction::new_coinbase(pkhash, reward, self.index));
         self.update_digest();
     }
 
