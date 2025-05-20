@@ -67,6 +67,10 @@ impl Blockchain {
     pub fn get_utxos(&self) -> &UTXOSet {
         &self.utxos
     }
+
+    pub fn utxo_exists(&self, txid: [u8; 32], index: u16) -> bool {
+        self.utxos.get_utxo(txid, index).is_some()
+    }
 }
 
 impl fmt::Display for Blockchain {

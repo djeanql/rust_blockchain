@@ -107,7 +107,6 @@ mod tests {
         block.timestamp = utils::unix_timestamp();
         mine(&mut block, [0; 32], blockchain.get_block_reward());
         blockchain.add_block(block).unwrap();
-        println!("{}", blockchain);
 
         let mut block2 = blockchain.next_block();
         block2.timestamp = 1000;
@@ -233,6 +232,35 @@ mod tests {
         block.update_digest();
 
         assert_eq!(blockchain.add_block(block), Err(BlockValidationError::InvalidTransactions(TransactionError::InvalidCoinbase)));
+    }
+
+    #[test]
+    fn test_add_to_utxo_set() {
+        let wallet = Wallet::new();
+        let mut blockchain = Blockchain::new();
+        let mut block = blockchain.next_block();
+
+        let inputs = vec![
+            TxInput::new_unsigned([0; 32], 2),
+            TxInput::new_unsigned([0; 32], 1),
+        ];
+
+        let outputs = vec![
+            TxOutput::new(100, [0; 32]),
+            TxOutput::new(200, [1; 32]),
+        ];
+
+        let mut tx = Transaction::new(inputs, outputs);
+
+        wallet.sign_transaction(&mut tx);
+        let txid = tx.id;
+
+        block.add_tx(tx);
+        mine(&mut block, wallet.pkhash, blockchain.get_block_reward());
+
+        blockchain.add_block(block).unwrap();
+
+        assert!(blockchain.utxo_exists(txid, 0) && blockchain.utxo_exists(txid, 1));
     }
 
     #[test]
