@@ -1,17 +1,10 @@
-use crate::transaction::{Transaction, TransactionError};
+use crate::transaction::Transaction;
 use crate::utils;
 use bincode::{Decode, Encode};
 use sha2::{Digest, Sha256};
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
-
-#[derive(Debug, PartialEq)]
-pub enum BlockIntegrityError {
-    InvalidProofOfWork,
-    HashDigestMismatch,
-    TimestampInFuture,
-    InvalidTransactions(TransactionError),
-}
+use crate::errors::{BlockValidationError, TransactionError};
 
 #[derive(Encode)]
 struct BlockNoDigest<'a> {
@@ -126,12 +119,12 @@ impl Block {
         self.update_digest();
     }
 
-    pub fn validate(&self) -> Result<(), BlockIntegrityError> {
+    pub fn validate(&self) -> Result<(), BlockValidationError> {
         if self.hash() >= self.target {
-            return Err(BlockIntegrityError::InvalidProofOfWork);
+            return Err(BlockValidationError::InvalidProofOfWork);
         }
         if self.digest != self.hash() {
-            return Err(BlockIntegrityError::HashDigestMismatch);
+            return Err(BlockValidationError::HashDigestMismatch);
         }
         if self.timestamp
             > SystemTime::now()
@@ -139,15 +132,15 @@ impl Block {
                 .unwrap()
                 .as_secs()
         {
-            return Err(BlockIntegrityError::TimestampInFuture);
+            return Err(BlockValidationError::TimestampInFuture);
         }
 
         let result = self.validate_transactions();
         if result.is_err() {
-            return Err(BlockIntegrityError::InvalidTransactions(result.err().unwrap()));
+            return Err(BlockValidationError::InvalidTransactions(result.err().unwrap()));
         }
 
-        self.validate_transactions().map_err(|e| BlockIntegrityError::InvalidTransactions(e))?;
+        self.validate_transactions().map_err(|e| BlockValidationError::InvalidTransactions(e))?;
 
         Ok(())
     }
@@ -183,7 +176,7 @@ mod tests {
     #[test]
     fn test_invalid_pow() {
         let block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
-        assert_eq!(block.validate(), Err(BlockIntegrityError::InvalidProofOfWork));
+        assert_eq!(block.validate(), Err(BlockValidationError::InvalidProofOfWork));
     }
 
     #[test]
@@ -191,7 +184,7 @@ mod tests {
         let mut block = Block::new(0, String::new(), String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), Vec::new());
         mine(&mut block);
         block.digest = String::new();
-        assert_eq!(block.validate(), Err(BlockIntegrityError::HashDigestMismatch));
+        assert_eq!(block.validate(), Err(BlockValidationError::HashDigestMismatch));
     }
 
     #[test]
@@ -204,7 +197,7 @@ mod tests {
             block.update_digest();
         }
 
-        assert_eq!(block.validate(), Err(BlockIntegrityError::TimestampInFuture));
+        assert_eq!(block.validate(), Err(BlockValidationError::TimestampInFuture));
     }
 
     #[test]
@@ -213,6 +206,6 @@ mod tests {
         let tx = Transaction::new(vec![], vec![]);
         block.add_tx(tx);
         mine(&mut block);
-        assert_eq!(block.validate(), Err(BlockIntegrityError::InvalidTransactions(TransactionError::EmptyInputs)));
+        assert_eq!(block.validate(), Err(BlockValidationError::InvalidTransactions(TransactionError::EmptyInputs)));
     }
 }

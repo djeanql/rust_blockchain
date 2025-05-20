@@ -1,13 +1,6 @@
-use crate::block::{Block, BlockIntegrityError};
+use crate::block::Block;
 use std::fmt;
-
-#[derive(Debug, PartialEq)]
-pub enum BlockValidationError {
-    Integrity(BlockIntegrityError),
-    InvalidPreviousHash,
-    InvalidIndex,
-    InvalidTimestamp,
-}
+use crate::errors::BlockValidationError;
 
 pub struct Blockchain {
     chain: Vec<Block>,
@@ -43,7 +36,7 @@ impl Blockchain {
     }
 
     pub fn validate_block(&self, block: &Block) -> Result<(), BlockValidationError> {
-        block.validate().map_err(|e| BlockValidationError::Integrity(e))?;
+        block.validate()?;
 
         if block.prev_hash != self.prev_hash() {
             return Err(BlockValidationError::InvalidPreviousHash);

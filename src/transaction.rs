@@ -4,6 +4,7 @@ use k256::ecdsa::signature::Verifier;
 use k256::ecdsa::{Signature, SigningKey, signature::Signer};
 use sha2::{Digest, Sha256};
 use std::fmt;
+use crate::errors::TransactionError;
 
 //TODO: use ed25519
 //TODO: use references instead of copying
@@ -92,20 +93,6 @@ impl TxOutput {
     pub fn new(value: u64, pkhash: [u8; 32]) -> TxOutput {
         TxOutput { value, pkhash }
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum TransactionError {
-    InvalidPublicKey,
-    InvalidSignature,
-    SignatureVerificationFailed,
-    InvalidID,
-    InvalidTimestamp,
-    ZeroValueOutput,
-    DuplicateInput,
-    DuplicateOutput,
-    EmptyInputs,
-    EmptyOutputs
 }
 
 #[derive(Encode, Clone)]

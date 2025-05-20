@@ -3,11 +3,12 @@ mod blockchain;
 mod transaction;
 mod utils;
 mod wallet;
-use block::BlockIntegrityError;
-use blockchain::{Blockchain, BlockValidationError};
-use transaction::{Transaction, TransactionError, TxInput, TxOutput};
+mod errors;
+use blockchain::{Blockchain};
+use transaction::{Transaction, TxInput, TxOutput};
 use utils::*;
 use wallet::Wallet;
+use errors::{BlockValidationError, TransactionError};
 
 fn main() {
     println!("Hello, world!");
@@ -85,7 +86,7 @@ mod tests {
         let mut blockchain = Blockchain::new();
         assert_eq!(
             blockchain.add_block(blockchain.next_block()),
-            Err(BlockValidationError::Integrity(BlockIntegrityError::InvalidProofOfWork))
+            Err(BlockValidationError::InvalidProofOfWork),
         )
     }
 
@@ -200,9 +201,8 @@ mod tests {
 
         let result = blockchain.add_block(block);
         
-        assert!(result == Err(BlockValidationError::Integrity(BlockIntegrityError::InvalidTransactions(TransactionError::InvalidSignature))) ||
-            result == Err(BlockValidationError::Integrity(BlockIntegrityError::InvalidTransactions(TransactionError::InvalidPublicKey)))
-        );
+        assert!(result == Err(BlockValidationError::InvalidTransactions(TransactionError::InvalidSignature)) ||
+            result == Err(BlockValidationError::InvalidTransactions(TransactionError::InvalidPublicKey)));
     }
 
     #[test]
