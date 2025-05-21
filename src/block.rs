@@ -49,7 +49,6 @@ impl Block {
         block
     }
 
-    #[allow(dead_code)]
     pub fn from_bincode(data: &[u8]) -> Block {
         bincode::decode_from_slice(data, bincode::config::standard())
             .unwrap()
@@ -140,13 +139,6 @@ impl Block {
                 .as_secs()
         {
             return Err(BlockValidationError::TimestampInFuture);
-        }
-
-        let result = self.validate_transactions();
-        if result.is_err() {
-            return Err(BlockValidationError::InvalidTransactions(
-                result.err().unwrap(),
-            ));
         }
 
         self.validate_transactions()
@@ -272,7 +264,10 @@ mod tests {
             10,
             String::from("abcd"),
             String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-            vec![Transaction::new(vec![TxInput::new_unsigned([1; 32], 0)], vec![TxOutput::new(50, [2; 32])])],
+            vec![Transaction::new(
+                vec![TxInput::new_unsigned([1; 32], 0)],
+                vec![TxOutput::new(50, [2; 32])],
+            )],
         );
         utils::mine(&mut block, [0; 32], 0);
 
@@ -287,10 +282,21 @@ mod tests {
         assert_eq!(block.nonce, deserialised.nonce);
 
         assert_eq!(deserialised.transactions[0].id, block.transactions[0].id);
-        assert_eq!(deserialised.transactions[0].inputs[0].txid, block.transactions[0].inputs[0].txid);
-        assert_eq!(deserialised.transactions[0].inputs[0].output, block.transactions[0].inputs[0].output);
-        assert_eq!(deserialised.transactions[0].outputs[0].value, block.transactions[0].outputs[0].value);
-        assert_eq!(deserialised.transactions[0].outputs[0].pkhash, block.transactions[0].outputs[0].pkhash);
-
+        assert_eq!(
+            deserialised.transactions[0].inputs[0].txid,
+            block.transactions[0].inputs[0].txid
+        );
+        assert_eq!(
+            deserialised.transactions[0].inputs[0].output,
+            block.transactions[0].inputs[0].output
+        );
+        assert_eq!(
+            deserialised.transactions[0].outputs[0].value,
+            block.transactions[0].outputs[0].value
+        );
+        assert_eq!(
+            deserialised.transactions[0].outputs[0].pkhash,
+            block.transactions[0].outputs[0].pkhash
+        );
     }
 }

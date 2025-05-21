@@ -140,6 +140,8 @@ pub struct Transaction {
     pub outputs: Vec<TxOutput>,
 }
 
+//TODO: Transaction builder patterns
+
 impl Transaction {
     pub fn new(inputs: Vec<TxInput>, outputs: Vec<TxOutput>) -> Transaction {
         Transaction {

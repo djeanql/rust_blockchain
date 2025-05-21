@@ -1,15 +1,10 @@
-use rust_blockchain::{wallet, blockchain, block, transaction, errors, utils};
+use rust_blockchain::{blockchain, errors, transaction, utils, wallet};
 
-use block::Block;
+use blockchain::Blockchain;
 use errors::{BlockValidationError, TransactionError};
 use transaction::{Transaction, TxInput, TxOutput};
 use utils::mine;
 use wallet::Wallet;
-use blockchain::Blockchain;
-
-//TODO: separate out the tests into separate modules
-//TODO: Check all stateful validation errors and double spending
-
 
 #[test]
 fn test_spend_utxo() {
@@ -188,4 +183,3 @@ fn test_duplicate_coinbase_tx() {
         ))
     )
 }
-
