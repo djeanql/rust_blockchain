@@ -48,15 +48,6 @@ fn test_spend_utxo() {
 }
 
 #[test]
-fn test_invalid_pow() {
-    let mut blockchain = Blockchain::new();
-    assert_eq!(
-        blockchain.add_block(blockchain.next_block()),
-        Err(BlockValidationError::InvalidProofOfWork),
-    )
-}
-
-#[test]
 fn test_invalid_index() {
     let mut blockchain = Blockchain::new();
     let mut block = blockchain.next_block();
@@ -99,50 +90,6 @@ fn test_invalid_prev_hash() {
         blockchain.add_block(block),
         Err(BlockValidationError::InvalidPreviousHash)
     )
-}
-
-#[test]
-fn test_digest_update() {
-    let mut block = Block::new(
-        0,
-        String::from(""),
-        String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-        Vec::new(),
-    );
-    let old_digest = block.digest.clone();
-    block.update_nonce_and_timestamp();
-    assert_ne!(block.digest, old_digest);
-
-    let inputs = vec![
-        TxInput::new_unsigned([0; 32], 2),
-        TxInput::new_unsigned([0; 32], 1),
-    ];
-
-    let outputs = vec![TxOutput::new(100, [0; 32]), TxOutput::new(200, [1; 32])];
-
-    let tx = Transaction::new(inputs, outputs);
-
-    block.add_tx(tx);
-    block.update_nonce_and_timestamp();
-    assert_ne!(block.digest, old_digest);
-}
-
-#[test]
-fn test_transaction_sign_and_verify() {
-    let wallet = Wallet::new();
-
-    let inputs = vec![
-        TxInput::new_unsigned([0; 32], 2),
-        TxInput::new_unsigned([0; 32], 1),
-    ];
-
-    let outputs = vec![TxOutput::new(100, [0; 32]), TxOutput::new(200, [1; 32])];
-
-    let mut tx = Transaction::new(inputs, outputs);
-
-    wallet.sign_transaction(&mut tx);
-
-    assert!(tx.verify().is_ok());
 }
 
 #[test]

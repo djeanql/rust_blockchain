@@ -281,7 +281,7 @@ mod tests {
     use crate::wallet::Wallet;
 
     #[test]
-    fn test_sign() {
+    fn test_sign_and_verify() {
         let wallet = Wallet::new();
 
         let inputs = vec![
