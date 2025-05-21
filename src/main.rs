@@ -195,26 +195,38 @@ mod tests {
     }
 
     #[test]
-    fn test_transaction_invalid_signature() {
+    fn test_unauthorized_spend_rejected() {
         let mut blockchain = Blockchain::new();
+        let wallet = Wallet::new();
 
         let mut block = blockchain.next_block();
 
+        mine(&mut block, [0; 32], blockchain.get_block_reward()); // block reward UTXO will be owned by null address
+        blockchain.add_block(block).unwrap();
+
+        let (txid, output_index) = blockchain.utxos.utxos_from_pkhash([0; 32])[0];
+
         let inputs = vec![
-            TxInput::new_unsigned([0; 32], 2),
-            TxInput::new_unsigned([0; 32], 1),
+            TxInput::new_unsigned(txid, output_index), // attempt to spend coinbase UTXO
         ];
 
-        let outputs = vec![TxOutput::new(100, [0; 32]), TxOutput::new(200, [1; 32])];
+        let outputs = vec![TxOutput::new(100, [0; 32])];
 
-        let tx = Transaction::new(inputs, outputs);
-
+        let mut tx = Transaction::new(inputs, outputs);
+        let mut block = blockchain.next_block();
+        wallet.sign_transaction(&mut tx);
         block.add_tx(tx);
+
         mine(&mut block, [0; 32], blockchain.get_block_reward());
 
         let result = blockchain.add_block(block);
 
-        assert!(result.is_err());
+        assert_eq!(
+            result,
+            Err(BlockValidationError::InvalidTransactions(
+                TransactionError::UnauthorizedSpend
+            ))
+        );
     }
 
     #[test]
@@ -291,5 +303,7 @@ mod tests {
         assert_eq!(block.prev_hash, deserialised.prev_hash);
         assert_eq!(block.target, deserialised.target);
         assert_eq!(block.transactions.len(), deserialised.transactions.len());
+        assert_eq!(block.timestamp, deserialised.timestamp);
+        assert_eq!(block.nonce, deserialised.nonce);
     }
 }

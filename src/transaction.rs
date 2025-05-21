@@ -320,10 +320,10 @@ mod tests {
 
         transaction.inputs[0].signature[0] = 1;
 
-        assert!(matches!(
+        assert_eq!(
             transaction.verify_signatures(),
             Err(TransactionError::SignatureVerificationFailed)
-        ));
+        );
     }
 
     #[test]
@@ -338,10 +338,10 @@ mod tests {
 
         // tamper
         tx.inputs[0].signature[0] ^= 0xFF;
-        assert!(matches!(
+        assert_eq!(
             tx.verify_signatures(),
             Err(TransactionError::SignatureVerificationFailed)
-        ));
+        );
     }
 
     #[test]
@@ -374,7 +374,7 @@ mod tests {
         assert!(tx.verify().is_ok());
 
         tx.id[0] ^= 0xFF;
-        assert!(matches!(tx.verify(), Err(TransactionError::InvalidID)));
+        assert_eq!(tx.verify(), Err(TransactionError::InvalidID));
     }
 
     #[test]
@@ -388,10 +388,7 @@ mod tests {
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
 
-        assert!(matches!(
-            tx.verify(),
-            Err(TransactionError::InvalidTimestamp)
-        ));
+        assert_eq!(tx.verify(), Err(TransactionError::InvalidTimestamp));
     }
 
     #[test]
@@ -404,10 +401,7 @@ mod tests {
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
 
-        assert!(matches!(
-            tx.verify(),
-            Err(TransactionError::ZeroValueOutput)
-        ));
+        assert_eq!(tx.verify(), Err(TransactionError::ZeroValueOutput));
     }
 
     #[test]
@@ -423,7 +417,7 @@ mod tests {
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
 
-        assert!(matches!(tx.verify(), Err(TransactionError::DuplicateInput)));
+        assert_eq!(tx.verify(), Err(TransactionError::DuplicateInput));
     }
 
     #[test]
@@ -436,10 +430,7 @@ mod tests {
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
 
-        assert!(matches!(
-            tx.verify(),
-            Err(TransactionError::DuplicateOutput)
-        ));
+        assert_eq!(tx.verify(), Err(TransactionError::DuplicateOutput));
     }
 
     #[test]
@@ -452,10 +443,7 @@ mod tests {
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
 
-        assert!(matches!(
-            tx.verify_coinbase(),
-            Err(TransactionError::InvalidCoinbase)
-        ));
+        assert_eq!(tx.verify_coinbase(), Err(TransactionError::InvalidCoinbase));
     }
 
     #[test]
@@ -468,9 +456,6 @@ mod tests {
         let wallet = Wallet::new();
         wallet.sign_transaction(&mut tx);
 
-        assert!(matches!(
-            tx.verify_coinbase(),
-            Err(TransactionError::InvalidCoinbase)
-        ));
+        assert_eq!(tx.verify_coinbase(), Err(TransactionError::InvalidCoinbase));
     }
 }
