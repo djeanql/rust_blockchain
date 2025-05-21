@@ -121,13 +121,12 @@ mod tests {
     fn test_invalid_timestamp() {
         let mut blockchain = Blockchain::new();
         let mut block = blockchain.next_block();
-        block.timestamp = utils::unix_timestamp();
         mine(&mut block, [0; 32], blockchain.get_block_reward());
         blockchain.add_block(block).unwrap();
 
         let mut block2 = blockchain.next_block();
         block2.timestamp = 1000;
-        block2.add_coinbase_tx([0; 32], 0);
+        block2.add_coinbase_tx([0; 32], blockchain.get_block_reward());
         while block2.hash() > block2.target {
             block2.nonce += 1;
         }
@@ -136,6 +135,20 @@ mod tests {
         assert_eq!(
             blockchain.add_block(block2),
             Err(BlockValidationError::InvalidTimestamp)
+        )
+    }
+
+    #[test]
+    fn test_invalid_block_reward() {
+        let mut blockchain = Blockchain::new();
+        let mut block = blockchain.next_block();
+        mine(&mut block, [0; 32], 1000);
+
+        assert_eq!(
+            blockchain.add_block(block),
+            Err(BlockValidationError::InvalidTransactions(
+                TransactionError::InvalidCoinbase
+            ))
         )
     }
 

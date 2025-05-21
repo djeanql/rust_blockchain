@@ -44,8 +44,11 @@ impl Blockchain {
     }
 
     fn validate_transactions_stateful(&self, block: &Block) -> Result<(), TransactionError> {
-        //TODO: check coinbase reward
         //TODO: check for double spend
+
+        if block.transactions[0].outputs[0].value != self.get_block_reward() {
+            return Err(TransactionError::InvalidCoinbase);
+        }
 
         for tx in &block.transactions[1..] {
             let mut inputs_total = 0;
