@@ -290,20 +290,4 @@ mod tests {
             ))
         )
     }
-
-    #[test]
-    fn test_deserialise_block() {
-        let blockchain = Blockchain::new();
-        let block = blockchain.next_block();
-
-        let serialised = block.as_bincode();
-        let deserialised = Block::from_bincode(&serialised);
-
-        assert_eq!(block.index, deserialised.index);
-        assert_eq!(block.prev_hash, deserialised.prev_hash);
-        assert_eq!(block.target, deserialised.target);
-        assert_eq!(block.transactions.len(), deserialised.transactions.len());
-        assert_eq!(block.timestamp, deserialised.timestamp);
-        assert_eq!(block.nonce, deserialised.nonce);
-    }
 }

@@ -6,6 +6,8 @@ use sha2::{Digest, Sha256};
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+// TODO: use bytes instead of strings for hash
+
 #[derive(Encode)]
 struct BlockNoDigest<'a> {
     index: u64,
@@ -188,6 +190,7 @@ impl fmt::Display for Block {
 
 mod tests {
     use super::*;
+    use crate::transaction::{Transaction, TxInput, TxOutput};
 
     #[test]
     fn test_invalid_pow() {
@@ -261,5 +264,33 @@ mod tests {
                 TransactionError::EmptyInputs
             ))
         );
+    }
+
+    #[test]
+    fn test_deserialise_block() {
+        let mut block = Block::new(
+            10,
+            String::from("abcd"),
+            String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            vec![Transaction::new(vec![TxInput::new_unsigned([1; 32], 0)], vec![TxOutput::new(50, [2; 32])])],
+        );
+        utils::mine(&mut block, [0; 32], 0);
+
+        let serialised = block.as_bincode();
+        let deserialised = Block::from_bincode(&serialised);
+
+        assert_eq!(block.index, deserialised.index);
+        assert_eq!(block.prev_hash, deserialised.prev_hash);
+        assert_eq!(block.target, deserialised.target);
+        assert_eq!(block.transactions.len(), deserialised.transactions.len());
+        assert_eq!(block.timestamp, deserialised.timestamp);
+        assert_eq!(block.nonce, deserialised.nonce);
+
+        assert_eq!(deserialised.transactions[0].id, block.transactions[0].id);
+        assert_eq!(deserialised.transactions[0].inputs[0].txid, block.transactions[0].inputs[0].txid);
+        assert_eq!(deserialised.transactions[0].inputs[0].output, block.transactions[0].inputs[0].output);
+        assert_eq!(deserialised.transactions[0].outputs[0].value, block.transactions[0].outputs[0].value);
+        assert_eq!(deserialised.transactions[0].outputs[0].pkhash, block.transactions[0].outputs[0].pkhash);
+
     }
 }
