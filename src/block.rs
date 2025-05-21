@@ -6,25 +6,25 @@ use sha2::{Digest, Sha256};
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-// TODO: use bytes instead of strings for hash
+// TODO: use custom Digest type implementing From
 
 #[derive(Encode)]
 struct BlockNoDigest<'a> {
     index: u64,
     timestamp: u64,
-    prev_hash: &'a String,
-    target: &'a String,
+    prev_hash: &'a [u8; 32],
+    target: &'a [u8; 32],
     transactions: &'a Vec<Transaction>,
     nonce: u64,
 }
 
 #[derive(Encode, Decode)]
 pub struct Block {
-    pub digest: String,
+    pub digest: [u8; 32],
     pub index: u64,
     pub timestamp: u64,
-    pub prev_hash: String,
-    pub target: String,
+    pub prev_hash: [u8; 32],
+    pub target: [u8; 32],
     pub transactions: Vec<Transaction>,
     pub nonce: u64,
 }
@@ -32,12 +32,12 @@ pub struct Block {
 impl Block {
     pub fn new(
         index: u64,
-        prev_hash: String,
-        target: String,
+        prev_hash: [u8; 32],
+        target: [u8; 32],
         transactions: Vec<Transaction>,
     ) -> Block {
         let mut block = Block {
-            digest: String::new(),
+            digest: [0; 32],
             index,
             timestamp: utils::unix_timestamp(),
             prev_hash,
@@ -57,15 +57,15 @@ impl Block {
 
     pub fn genesis() -> Block {
         Block {
-            digest: String::from(
-                "00094ec2294b08eff5da9c713f9d7cbdb5b84243b0e03f1842bdfe7cc9a66fcd",
-            ),
+            digest: hex::decode("00094ec2294b08eff5da9c713f9d7cbdb5b84243b0e03f1842bdfe7cc9a66fcd")
+                .unwrap()
+                .as_slice().try_into().unwrap(),
             index: 0,
             timestamp: 1747162780,
-            prev_hash: String::new(),
-            target: String::from(
+            prev_hash: [0; 32],
+            target: hex::decode(
                 "000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-            ),
+            ).unwrap().as_slice().try_into().unwrap(),
             transactions: Vec::new(),
             nonce: 8376,
         }
@@ -89,12 +89,12 @@ impl Block {
         bincode::encode_to_vec(no_digest, bincode::config::standard()).unwrap()
     }
 
-    pub fn hash(&self) -> String {
+    pub fn hash(&self) -> [u8; 32] {
         let block_data = self.as_bincode_no_digest();
 
         let mut hasher = Sha256::new();
         hasher.update(block_data);
-        format!("{:x}", hasher.finalize())
+        hasher.finalize().as_slice().try_into().unwrap()
     }
 
     pub fn update_digest(&mut self) {
@@ -184,9 +184,9 @@ impl fmt::Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "Block #{}", self.index)?;
         writeln!(f, "  Timestamp: {}", self.timestamp)?;
-        writeln!(f, "  Previous Hash: {}", self.prev_hash)?;
+        writeln!(f, "  Previous Hash: {}", hex::encode(self.prev_hash))?;
         writeln!(f, "  Nonce: {}", self.nonce)?;
-        writeln!(f, "  Hash: {}", self.digest)?;
+        writeln!(f, "  Hash: {}", hex::encode(self.digest))?;
         writeln!(f, "  Transactions:")?;
         for tx in &self.transactions {
             let indented = tx
@@ -209,8 +209,12 @@ mod tests {
     fn test_invalid_pow() {
         let block = Block::new(
             0,
-            String::new(),
-            String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            [0; 32],
+            hex::decode("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
             Vec::new(),
         );
         assert_eq!(
@@ -223,12 +227,16 @@ mod tests {
     fn test_invalid_digest() {
         let mut block = Block::new(
             0,
-            String::new(),
-            String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            [0; 32],
+            hex::decode("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
             Vec::new(),
         );
         utils::mine(&mut block, [0; 32], 0);
-        block.digest = String::new();
+        block.digest = [0; 32];
         assert_eq!(
             block.validate(),
             Err(BlockValidationError::HashDigestMismatch)
@@ -239,8 +247,12 @@ mod tests {
     fn test_invalid_timestamp() {
         let mut block = Block::new(
             0,
-            String::new(),
-            String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            [0; 32],
+            hex::decode("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
             Vec::new(),
         );
         block.timestamp = SystemTime::now()
@@ -264,8 +276,12 @@ mod tests {
     fn test_invalid_transactions() {
         let mut block = Block::new(
             0,
-            String::new(),
-            String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            [0; 32],
+            hex::decode("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
             Vec::new(),
         );
         let tx = Transaction::new(vec![], vec![]);
@@ -283,8 +299,16 @@ mod tests {
     fn test_deserialise_block() {
         let mut block = Block::new(
             10,
-            String::from("abcd"),
-            String::from("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+            hex::decode("abcd000000000000000000000000000000000000000000000000000000000000")
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
+            hex::decode("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
             vec![Transaction::new(
                 vec![TxInput::new_unsigned([1; 32], 0)],
                 vec![TxOutput::new(50, [2; 32])],

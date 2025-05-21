@@ -79,7 +79,7 @@ fn test_invalid_timestamp() {
 fn test_invalid_prev_hash() {
     let mut blockchain = Blockchain::new();
     let mut block = blockchain.next_block();
-    block.prev_hash = String::from("invalid_hash");
+    block.prev_hash = [0; 32];
     mine(&mut block, [0; 32], blockchain.get_block_reward());
     assert_eq!(
         blockchain.add_block(block),

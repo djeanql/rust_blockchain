@@ -6,7 +6,7 @@ use std::fmt;
 
 pub struct Blockchain {
     chain: Vec<Block>,
-    target: String,
+    target: [u8; 32],
     pub utxos: UTXOSet,
 }
 
@@ -16,9 +16,9 @@ impl Blockchain {
     pub fn new() -> Blockchain {
         Blockchain {
             chain: vec![Block::genesis()],
-            target: String::from(
+            target: hex::decode(
                 "000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-            ),
+            ).unwrap().as_slice().try_into().unwrap(),
             utxos: UTXOSet::new(),
         }
     }
@@ -44,8 +44,6 @@ impl Blockchain {
     }
 
     fn validate_transactions_stateful(&self, block: &Block) -> Result<(), TransactionError> {
-        //TODO: check for double spend
-
         if block.transactions[0].outputs[0].value != self.get_block_reward() {
             return Err(TransactionError::InvalidCoinbase);
         }
@@ -95,10 +93,10 @@ impl Blockchain {
         Ok(())
     }
 
-    pub fn prev_hash(&self) -> String {
+    pub fn prev_hash(&self) -> [u8; 32] {
         match self.chain.last() {
             Some(block) => block.digest.clone(),
-            None => String::from(""),
+            None => [0; 32],
         }
     }
 }
@@ -106,7 +104,7 @@ impl Blockchain {
 impl fmt::Display for Blockchain {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "\nBlockchain:")?;
-        writeln!(f, "Target: {}", self.target)?;
+        writeln!(f, "Target: {}", hex::encode(self.target))?;
         writeln!(f, "Number of blocks: {}", self.chain.len())?;
         for block in &self.chain {
             writeln!(f, "\n{}", block)?;

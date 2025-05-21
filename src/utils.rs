@@ -2,9 +2,9 @@ use crate::block::Block;
 use num_bigint::BigUint;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub fn hash_less_than_target(hash: &str, target: &str) -> bool {
-    let hash_num = BigUint::from_bytes_be(&hex::decode(hash).unwrap());
-    let target_num = BigUint::from_bytes_be(&hex::decode(target).unwrap());
+pub fn hash_less_than_target(hash: &[u8; 32], target: &[u8; 32]) -> bool {
+    let hash_num = BigUint::from_bytes_be(hash);
+    let target_num = BigUint::from_bytes_be(target);
     hash_num < target_num
 }
 
