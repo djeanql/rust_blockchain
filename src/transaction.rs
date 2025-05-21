@@ -207,8 +207,6 @@ impl Transaction {
             return Err(TransactionError::EmptyOutputs);
         }
 
-        self.verify_signatures()?;
-
         for input in &self.inputs {
             if self
                 .inputs
@@ -241,6 +239,8 @@ impl Transaction {
         } else if self.timestamp > utils::unix_timestamp() {
             return Err(TransactionError::InvalidTimestamp);
         }
+
+        self.verify_signatures()?;
 
         Ok(())
     }
@@ -321,7 +321,7 @@ mod tests {
         transaction.inputs[0].signature[0] = 1;
 
         assert!(matches!(
-            transaction.verify(),
+            transaction.verify_signatures(),
             Err(TransactionError::SignatureVerificationFailed)
         ));
     }
@@ -339,7 +339,7 @@ mod tests {
         // tamper
         tx.inputs[0].signature[0] ^= 0xFF;
         assert!(matches!(
-            tx.verify(),
+            tx.verify_signatures(),
             Err(TransactionError::SignatureVerificationFailed)
         ));
     }
@@ -356,7 +356,7 @@ mod tests {
 
         // tamper
         tx.inputs[0].pubkey[1] ^= 0xAA;
-        let result = tx.verify();
+        let result = tx.verify_signatures();
         assert!(
             matches!(result, Err(TransactionError::SignatureVerificationFailed))
                 || matches!(result, Err(TransactionError::InvalidPublicKey))

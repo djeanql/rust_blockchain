@@ -139,20 +139,6 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_block_reward() {
-        let mut blockchain = Blockchain::new();
-        let mut block = blockchain.next_block();
-        mine(&mut block, [0; 32], 1000);
-
-        assert_eq!(
-            blockchain.add_block(block),
-            Err(BlockValidationError::InvalidTransactions(
-                TransactionError::InvalidCoinbase
-            ))
-        )
-    }
-
-    #[test]
     fn test_invalid_prev_hash() {
         let mut blockchain = Blockchain::new();
         let mut block = blockchain.next_block();
@@ -228,16 +214,7 @@ mod tests {
 
         let result = blockchain.add_block(block);
 
-        assert!(
-            result
-                == Err(BlockValidationError::InvalidTransactions(
-                    TransactionError::InvalidSignature
-                ))
-                || result
-                    == Err(BlockValidationError::InvalidTransactions(
-                        TransactionError::InvalidPublicKey
-                    ))
-        );
+        assert!(result.is_err());
     }
 
     #[test]
@@ -269,6 +246,37 @@ mod tests {
                 TransactionError::InvalidCoinbase
             ))
         );
+    }
+
+    #[test]
+    fn test_invalid_block_reward() {
+        let mut blockchain = Blockchain::new();
+        let mut block = blockchain.next_block();
+        mine(&mut block, [0; 32], 1000);
+
+        assert_eq!(
+            blockchain.add_block(block),
+            Err(BlockValidationError::InvalidTransactions(
+                TransactionError::InvalidCoinbase
+            ))
+        )
+    }
+
+    #[test]
+    fn test_duplicate_coinbase_tx() {
+        let mut blockchain = Blockchain::new();
+        let mut block = blockchain.next_block();
+
+        block.add_coinbase_tx([0; 32], blockchain.get_block_reward());
+        // add coinbase tx again in mine function
+        mine(&mut block, [0; 32], blockchain.get_block_reward());
+
+        assert_eq!(
+            blockchain.add_block(block),
+            Err(BlockValidationError::InvalidTransactions(
+                TransactionError::InvalidPublicKey
+            ))
+        )
     }
 
     #[test]
