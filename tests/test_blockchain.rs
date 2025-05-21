@@ -183,3 +183,40 @@ fn test_duplicate_coinbase_tx() {
         ))
     )
 }
+
+#[test]
+fn test_double_spend() {
+    let mut blockchain = Blockchain::new();
+    let wallet = Wallet::new();
+
+    let mut block = blockchain.next_block();
+    mine(&mut block, wallet.pkhash, blockchain.get_block_reward());
+    blockchain.add_block(block).unwrap();
+
+    let (txid, output_index) = blockchain.utxos.utxos_from_pkhash(wallet.pkhash)[0];
+
+    let mut tx = Transaction::new(
+        vec![TxInput::new_unsigned(txid, output_index)],
+        vec![TxOutput::new(100, [0; 32])],
+    );
+    wallet.sign_transaction(&mut tx);
+
+    let mut double_spend_tx = Transaction::new(
+        vec![TxInput::new_unsigned(txid, output_index)],
+        vec![TxOutput::new(100, wallet.pkhash)],
+    );
+    wallet.sign_transaction(&mut double_spend_tx);
+
+    let mut block2 = blockchain.next_block();
+    block2.add_tx(tx);
+    block2.add_tx(double_spend_tx);
+
+    mine(&mut block2, wallet.pkhash, blockchain.get_block_reward());
+
+    assert_eq!(
+        blockchain.add_block(block2),
+        Err(BlockValidationError::InvalidTransactions(
+            TransactionError::DoubleSpend
+        ))
+    );
+}
