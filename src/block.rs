@@ -141,6 +141,10 @@ impl Block {
             return Err(BlockValidationError::TimestampInFuture);
         }
 
+        if !self.check_double_spend() {
+            return Err(BlockValidationError::InvalidTransactions(TransactionError::DoubleSpend));
+        }
+
         self.validate_transactions()
             .map_err(BlockValidationError::InvalidTransactions)?;
 
@@ -156,6 +160,23 @@ impl Block {
             tx.verify()?;
         }
         Ok(())
+    }
+
+    fn get_spent_utxos(&self) -> Vec<([u8; 32], u16)> {
+        let mut spent_utxos = Vec::new();
+        for tx in &self.transactions[1..] {
+            for input in &tx.inputs {
+                spent_utxos.push((input.txid, input.output));
+            }
+        }
+        spent_utxos
+    }
+
+    fn check_double_spend(&self) -> bool {
+        let mut spent_utxos = self.get_spent_utxos();
+        spent_utxos.sort();
+        spent_utxos.dedup();
+        spent_utxos.len() == self.get_spent_utxos().len()
     }
 }
 
